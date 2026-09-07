@@ -181,16 +181,30 @@
     `;
   }
 
+  function renderDupWarningHtml(title, isbn, excludeId) {
+    const dupes = findSameBooks(title, isbn, excludeId);
+    if (dupes.length === 0) return '';
+    return `<div class="bt-dup-warning">📚 この本はすでに${dupes.length}冊あります: ${dupes.map(d => `${LOCATION_LABEL[d.location]}(${ACQUISITION_LABEL[d.acquisition] || '不明'})`).join('、')} ー そのまま追加できます</div>`;
+  }
+
+  function updateDupWarningLive() {
+    const titleEl = document.getElementById('bt-input-title');
+    const isbnEl = document.getElementById('bt-input-isbn');
+    const container = document.getElementById('bt-dup-container');
+    if (!titleEl || !container) return;
+    container.innerHTML = renderDupWarningHtml(titleEl.value, isbnEl ? isbnEl.value : '', editingId);
+  }
+
+  function updateCoverPreview(url) {
+    const preview = document.getElementById('bt-cover-preview');
+    if (!preview) return;
+    if (url) { preview.src = url; preview.style.display = ''; }
+    else { preview.style.display = 'none'; }
+  }
+
   function renderForm() {
     const editing = editingId ? books.find(b => b.id === editingId) : null;
     const v = (f, d) => editing ? (editing[f] || d || '') : (d || '');
-
-    const dupes = editingId === null ? findSameBooks(v('title'), v('isbn'), editingId) : [];
-    const dupeHtml = dupes.length > 0 ? `
-      <div class="bt-dup-warning bt-full">
-        📚 この本はすでに${dupes.length}冊あります: ${dupes.map(d => `${LOCATION_LABEL[d.location]}(${ACQUISITION_LABEL[d.acquisition] || '不明'})`).join('、')}
-        ー そのまま追加できます
-      </div>` : '';
 
     return `
       <div class="bt-form">
@@ -200,7 +214,7 @@
           <button type="button" class="bt-btn-ghost" id="bt-lookup-btn">検索</button>
         </div>
         <div class="bt-full" id="bt-lookup-status"></div>
-        ${dupeHtml}
+        <div class="bt-full" id="bt-dup-container">${renderDupWarningHtml(v('title'), v('isbn'), editingId)}</div>
         <input class="bt-full" id="bt-input-title" type="text" placeholder="タイトル(必須)" value="${escapeHtml(v('title'))}" />
         <input id="bt-input-author" type="text" placeholder="著者" value="${escapeHtml(v('author'))}" />
         <input id="bt-input-publisher" type="text" placeholder="出版社" value="${escapeHtml(v('publisher'))}" />
@@ -214,7 +228,10 @@
           <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
           <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>不明</option>
         </select>
-        <input type="hidden" id="bt-input-coverUrl" value="${escapeHtml(v('coverUrl'))}" />
+        <div class="bt-full bt-cover-row">
+          <input id="bt-input-coverUrl" type="text" placeholder="書影URL(自動取得できなかった場合は画像URLを直接入力)" value="${escapeHtml(v('coverUrl'))}" />
+          <img id="bt-cover-preview" class="bt-thumb" src="${escapeHtml(v('coverUrl'))}" alt="" style="${v('coverUrl') ? '' : 'display:none;'}" onerror="this.style.display='none'" />
+        </div>
         <div class="bt-form-actions bt-full">
           <button class="bt-btn-ghost" id="bt-cancel-form">キャンセル</button>
           <button class="bt-btn-primary" id="bt-save-form">${editing ? '更新する' : '登録する'}</button>
@@ -251,17 +268,13 @@
 
     const titleInput = document.getElementById('bt-input-title');
     if (titleInput) {
-      titleInput.addEventListener('input', () => {
-        const pos = titleInput.selectionStart;
-        render();
-        const t = document.getElementById('bt-input-title');
-        if (t) { t.focus(); t.selectionStart = t.selectionEnd = pos; }
-      });
+      titleInput.addEventListener('input', updateDupWarningLive);
     }
 
     const isbnInput = document.getElementById('bt-input-isbn');
     if (isbnInput) {
       isbnInput.addEventListener('input', () => {
+        updateDupWarningLive();
         clearTimeout(lookupTimer);
         lookupTimer = setTimeout(() => doLookup(isbnInput.value), 500);
       });
@@ -269,6 +282,11 @@
         // USBバーコードリーダーはスキャン後に Enter を送ることが多い
         if (e.key === 'Enter') { e.preventDefault(); doLookup(isbnInput.value); }
       });
+    }
+
+    const coverInput = document.getElementById('bt-input-coverUrl');
+    if (coverInput) {
+      coverInput.addEventListener('input', () => updateCoverPreview(coverInput.value));
     }
 
     const lookupBtn = document.getElementById('bt-lookup-btn');
@@ -329,17 +347,11 @@
       if (titleEl && !titleEl.value) titleEl.value = res.title || '';
       if (authorEl && !authorEl.value) authorEl.value = res.author || '';
       if (publisherEl && !publisherEl.value) publisherEl.value = res.publisher || '';
-      if (coverEl) coverEl.value = res.coverUrl || '';
+      if (coverEl && !coverEl.value) coverEl.value = res.coverUrl || '';
+      if (coverEl) updateCoverPreview(coverEl.value);
       if (statusEl) statusEl.innerHTML = `<span class="bt-status-ok">${escapeHtml(res.title)} を見つけました (${res.source})</span>`;
 
-      // 重複情報を更新するため、タイトル欄の再描画をトリガー
-      const dupContainer = document.querySelector('.bt-dup-warning');
-      const dupes = findSameBooks(titleEl ? titleEl.value : '', isbn, editingId);
-      if (dupes.length > 0) {
-        const html = `📚 この本はすでに${dupes.length}冊あります: ${dupes.map(d => `${LOCATION_LABEL[d.location]}(${ACQUISITION_LABEL[d.acquisition] || '不明'})`).join('、')} ー そのまま追加できます`;
-        if (dupContainer) { dupContainer.innerHTML = html; }
-        else if (statusEl) { statusEl.insertAdjacentHTML('afterend', `<div class="bt-dup-warning bt-full">${html}</div>`); }
-      }
+      updateDupWarningLive();
     } catch (e) {
       if (statusEl) statusEl.innerHTML = '<span class="bt-status-warn">検索中にエラーが発生しました</span>';
     }
