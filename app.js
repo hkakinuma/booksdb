@@ -14,6 +14,7 @@
   let lendingId = null;
   let scannerInstance = null;
   let lookupTimer = null;
+  let isComposingSearch = false;
 
   const root = document.getElementById('app');
 
@@ -246,7 +247,16 @@
   function attachEvents() {
     const searchEl = document.getElementById('bt-search');
     if (searchEl) {
+      searchEl.addEventListener('compositionstart', () => { isComposingSearch = true; });
+      searchEl.addEventListener('compositionend', (e) => {
+        isComposingSearch = false;
+        query = e.target.value;
+        render();
+        const el = document.getElementById('bt-search');
+        if (el) { el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+      });
       searchEl.addEventListener('input', (e) => {
+        if (isComposingSearch) return; // 日本語入力の変換確定前は再描画しない(IMEが確定されてしまうのを防ぐ)
         query = e.target.value;
         render();
         const el = document.getElementById('bt-search');
