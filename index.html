@@ -33,7 +33,14 @@
   .bt-title { font-size: 26px; font-weight: 600; }
   .bt-count { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 12px; color: var(--ink-soft); }
 
-  .bt-toolbar { font-family: -apple-system, "Segoe UI", sans-serif; display: flex; gap: 8px; margin: 16px 0 14px; flex-wrap: wrap; align-items: center; }
+  .bt-toolbar {
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    display: flex; gap: 8px; margin: 0 0 14px; padding: 12px 0;
+    flex-wrap: wrap; align-items: center;
+    position: sticky; top: 0; z-index: 20;
+    background: var(--paper);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
   .bt-search { flex: 1 1 220px; padding: 9px 12px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper-raised); font-size: 14px; font-family: inherit; color: var(--ink); }
   .bt-filters { display: flex; gap: 6px; }
   .bt-filter-btn { font-family: -apple-system, "Segoe UI", sans-serif; padding: 8px 12px; border: 1px solid var(--rule); background: var(--paper-raised); border-radius: 3px; font-size: 13px; cursor: pointer; color: var(--ink-soft); }
@@ -91,10 +98,36 @@
   @media (max-width: 480px) {
     .bt-form { grid-template-columns: 1fr; }
   }
+
+  #bt-top-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--rule);
+    background: var(--ink);
+    color: var(--paper-raised);
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 30;
+  }
+  #bt-top-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
 </style>
 </head>
 <body>
   <div id="app"><div class="bt-loading">読み込み中…</div></div>
+  <button id="bt-top-btn" aria-label="最上部へ戻る" title="最上部へ戻る">↑</button>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="config.js"></script>

@@ -213,7 +213,7 @@
   function renderDupWarningHtml(title, isbn, excludeId) {
     const dupes = findSameBooks(title, isbn, excludeId);
     if (dupes.length === 0) return '';
-    return `<div class="bt-dup-warning">この本はすでに${dupes.length}冊あります: ${dupes.map(d => `${LOCATION_LABEL[d.location]}(${ACQUISITION_LABEL[d.acquisition] || '不明'})`).join('、')} ー そのまま追加できます</div>`;
+    return `<div class="bt-dup-warning">📚 この本はすでに${dupes.length}冊あります: ${dupes.map(d => `${LOCATION_LABEL[d.location]}(${ACQUISITION_LABEL[d.acquisition] || '不明'})`).join('、')} ー そのまま追加できます</div>`;
   }
 
   function updateDupWarningLive() {
@@ -518,4 +518,14 @@
   }
 
   loadBooks();
+
+  // 最上部へ戻るボタン(render()の再描画サイクルとは無関係に、ページ読み込み時に1回だけ設定)
+  const topBtn = document.getElementById('bt-top-btn');
+  if (topBtn) {
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 400) topBtn.classList.add('visible');
+      else topBtn.classList.remove('visible');
+    });
+    topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  }
 })();
