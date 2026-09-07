@@ -8,6 +8,7 @@
 
   let books = [];
   let filter = 'all'; // all | lab | home | lent
+  let sortBy = 'registered_desc'; // registered_desc | registered_asc | year_desc | year_asc
   let query = '';
   let showForm = false;
   let editingId = null;
@@ -79,6 +80,20 @@
     return true;
   }
 
+  function compareBooks(a, b) {
+    if (sortBy === 'year_desc' || sortBy === 'year_asc') {
+      const ay = String(a.publishedYear || '');
+      const by = String(b.publishedYear || '');
+      if (!ay && !by) return 0;
+      if (!ay) return 1; // 刊行年が無いものは常に末尾
+      if (!by) return -1;
+      return sortBy === 'year_desc' ? by.localeCompare(ay) : ay.localeCompare(by);
+    }
+    const ad = String(a.registeredDate || '');
+    const bd = String(b.registeredDate || '');
+    return sortBy === 'registered_desc' ? bd.localeCompare(ad) : ad.localeCompare(bd);
+  }
+
   function findSameBooks(title, isbn, excludeId) {
     const nt = normalize(title);
     const cleanIsbn = String(isbn || '').replace(/[^0-9Xx]/g, '');
@@ -94,6 +109,7 @@
 
   function render() {
     const visible = books.filter(b => matchesQuery(b) && matchesFilter(b));
+    visible.sort(compareBooks);
     const groups = {};
     const order = [];
     visible.forEach(b => {
@@ -117,6 +133,12 @@
           <button class="bt-filter-btn ${filter === 'home' ? 'active' : ''}" data-filter="home">自宅</button>
           <button class="bt-filter-btn ${filter === 'lent' ? 'active' : ''}" data-filter="lent">貸出中</button>
         </div>
+        <select class="bt-sort-select" id="bt-sort">
+          <option value="registered_desc" ${sortBy === 'registered_desc' ? 'selected' : ''}>登録が新しい順</option>
+          <option value="registered_asc" ${sortBy === 'registered_asc' ? 'selected' : ''}>登録が古い順</option>
+          <option value="year_desc" ${sortBy === 'year_desc' ? 'selected' : ''}>刊行年が新しい順</option>
+          <option value="year_asc" ${sortBy === 'year_asc' ? 'selected' : ''}>刊行年が古い順</option>
+        </select>
         ${!showForm ? '<button class="bt-add-btn" id="bt-open-add">+ 本を追加</button>' : ''}
       </div>
       ${showForm ? renderForm() : ''}
@@ -150,6 +172,11 @@
 
     const metaBits = [];
     if (b.author) metaBits.push(escapeHtml(b.author));
+    let pubBit = '';
+    if (b.publisher && b.publishedYear) pubBit = `${b.publisher}(${b.publishedYear})`;
+    else if (b.publisher) pubBit = b.publisher;
+    else if (b.publishedYear) pubBit = `(${b.publishedYear})`;
+    if (pubBit) metaBits.push(escapeHtml(pubBit));
     if (ACQUISITION_LABEL[b.acquisition]) metaBits.push(ACQUISITION_LABEL[b.acquisition]);
     if (b.status === 'lent' && b.borrower) metaBits.push(`→ ${escapeHtml(b.borrower)}${b.lentDate ? ' (' + escapeHtml(b.lentDate) + '〜)' : ''}`);
 
@@ -220,6 +247,7 @@
         <input class="bt-full" id="bt-input-title" type="text" placeholder="タイトル(必須)" value="${escapeHtml(v('title'))}" />
         <input id="bt-input-author" type="text" placeholder="著者" value="${escapeHtml(v('author'))}" />
         <input id="bt-input-publisher" type="text" placeholder="出版社" value="${escapeHtml(v('publisher'))}" />
+        <input id="bt-input-publishedYear" type="text" inputmode="numeric" placeholder="刊行年(西暦4桁、任意)" value="${escapeHtml(v('publishedYear'))}" />
         <select id="bt-input-location">
           <option value="lab" ${v('location', 'lab') === 'lab' ? 'selected' : ''}>研究室</option>
           <option value="home" ${v('location') === 'home' ? 'selected' : ''}>自宅</option>
@@ -267,6 +295,11 @@
     document.querySelectorAll('.bt-filter-btn').forEach(btn => {
       btn.addEventListener('click', () => { filter = btn.getAttribute('data-filter'); render(); });
     });
+
+    const sortEl = document.getElementById('bt-sort');
+    if (sortEl) {
+      sortEl.addEventListener('change', (e) => { sortBy = e.target.value; render(); });
+    }
 
     const openAddBtn = document.getElementById('bt-open-add');
     if (openAddBtn) {
@@ -362,10 +395,12 @@
       const titleEl = document.getElementById('bt-input-title');
       const authorEl = document.getElementById('bt-input-author');
       const publisherEl = document.getElementById('bt-input-publisher');
+      const yearEl = document.getElementById('bt-input-publishedYear');
       const coverEl = document.getElementById('bt-input-coverUrl');
       if (titleEl && !titleEl.value) titleEl.value = res.title || '';
       if (authorEl && !authorEl.value) authorEl.value = res.author || '';
       if (publisherEl && !publisherEl.value) publisherEl.value = res.publisher || '';
+      if (yearEl && !yearEl.value) yearEl.value = res.publishedYear || '';
       if (coverEl && !coverEl.value) coverEl.value = res.coverUrl || '';
       if (coverEl) updateCoverPreview(coverEl.value);
       if (statusEl) statusEl.innerHTML = `<span class="bt-status-ok">${escapeHtml(res.title)} を見つけました (${res.source})</span>`;
@@ -384,6 +419,7 @@
       title,
       author: document.getElementById('bt-input-author').value.trim(),
       publisher: document.getElementById('bt-input-publisher').value.trim(),
+      publishedYear: document.getElementById('bt-input-publishedYear').value.trim(),
       isbn: document.getElementById('bt-input-isbn').value.trim(),
       coverUrl: document.getElementById('bt-input-coverUrl').value.trim(),
       location: document.getElementById('bt-input-location').value,
