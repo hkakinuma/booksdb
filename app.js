@@ -4,7 +4,7 @@
 
   const LOCATION_LABEL = { lab: '研究室', home: '自宅' };
   const STATUS_LABEL = { available: '保管中', lent: '貸出中' };
-  const ACQUISITION_LABEL = { self: '自費', lab_budget: '個人研究費', kaken: '科研費', gift: '献本', unknown: 'その他・不明' };
+  const ACQUISITION_LABEL = { self: '自費', lab_budget: '研究費', gift: '献本', unknown: '不明' };
 
   let books = [];
   let filter = 'all'; // all | lab | home | lent
@@ -118,6 +118,14 @@
       groups[key].push(b);
     });
 
+    // グループ内では、並べ替え条件を保ったまま「研究室」を常に先頭にする
+    order.forEach(key => {
+      groups[key].sort((a, b) => {
+        if (a.location === b.location) return 0;
+        return a.location === 'lab' ? -1 : 1;
+      });
+    });
+
     const countLent = books.filter(b => b.status === 'lent').length;
 
     root.innerHTML = `
@@ -155,13 +163,19 @@
   function renderGroup(items) {
     const first = items[0];
     const multi = items.length > 1;
+    const thumb = first.coverUrl
+      ? `<img class="bt-thumb" src="${escapeHtml(first.coverUrl)}" alt="" onerror="this.style.display='none'" />`
+      : `<div class="bt-thumb bt-thumb-placeholder">📕</div>`;
     return `
       <div class="bt-group">
-        <div class="bt-group-title">
-          ${escapeHtml(first.title)}
-          ${multi ? `<span class="bt-copies">(${items.length}冊)</span>` : ''}
+        <div class="bt-group-header">
+          ${thumb}
+          <div class="bt-group-title">
+            ${escapeHtml(first.title)}
+            ${multi ? `<span class="bt-copies">(${items.length}冊)</span>` : ''}
+          </div>
         </div>
-        ${items.map(renderRow).join('')}
+        <div class="bt-group-rows">${items.map(renderRow).join('')}</div>
       </div>
     `;
   }
@@ -187,13 +201,8 @@
         <button class="bt-icon-btn" id="bt-cancel-lend">キャンセル</button>
       </div>` : '';
 
-    const thumb = b.coverUrl
-      ? `<img class="bt-thumb" src="${escapeHtml(b.coverUrl)}" alt="" />`
-      : `<div class="bt-thumb bt-thumb-placeholder">📕</div>`;
-
     return `
       <div class="bt-row">
-        ${thumb}
         <div class="bt-row-main">
           <div class="bt-row-tags">${locTag}${lentTag}</div>
           ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ・ ')}</div>` : ''}
@@ -253,11 +262,10 @@
           <option value="home" ${v('location') === 'home' ? 'selected' : ''}>自宅</option>
         </select>
         <select id="bt-input-acquisition">
-          <option value="lab_budget" ${v('acquisition') === 'lab_budget' ? 'selected' : ''}>個人研究費</option>
-          <option value="kaken" ${v('acquisition') === 'kaken' ? 'selected' : ''}>科研費</option>
-          <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
           <option value="self" ${v('acquisition', 'self') === 'self' ? 'selected' : ''}>自費</option>
-          <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>その他・不明</option>
+          <option value="lab_budget" ${v('acquisition') === 'lab_budget' ? 'selected' : ''}>研究費</option>
+          <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
+          <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>不明</option>
         </select>
         <div class="bt-full bt-cover-row">
           <input id="bt-input-coverUrl" type="text" placeholder="書影URL(自動取得できなかった場合は画像URLを直接入力)" value="${escapeHtml(v('coverUrl'))}" />
