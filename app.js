@@ -306,9 +306,16 @@
         const action = btn.getAttribute('data-action');
         const id = btn.getAttribute('data-id');
         if (action === 'edit') { editingId = id; showForm = true; render(); }
-        else if (action === 'delete') { deleteBook(id); }
+        else if (action === 'delete') {
+          if (!confirm('この本を削除しますか？')) return;
+          btn.disabled = true; btn.textContent = '削除中…';
+          deleteBook(id);
+        }
         else if (action === 'lend') { lendingId = id; render(); const inp = document.getElementById('bt-borrower-input'); if (inp) inp.focus(); }
-        else if (action === 'return') { returnBook(id); }
+        else if (action === 'return') {
+          btn.disabled = true; btn.textContent = '処理中…';
+          returnBook(id);
+        }
       });
     });
 
@@ -317,7 +324,8 @@
       confirmLendBtn.addEventListener('click', () => {
         const id = confirmLendBtn.getAttribute('data-id');
         const name = document.getElementById('bt-borrower-input').value.trim();
-        lendingId = null;
+        confirmLendBtn.disabled = true;
+        confirmLendBtn.textContent = '処理中…';
         lendBookAction(id, name);
       });
     }
@@ -391,13 +399,13 @@
   }
 
   async function deleteBook(id) {
-    if (!confirm('この本を削除しますか？')) return;
     await apiPost('delete', { id });
     await loadBooks();
   }
 
   async function lendBookAction(id, borrower) {
     await apiPost('lend', { id, borrower });
+    lendingId = null;
     await loadBooks();
   }
 
