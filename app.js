@@ -56,7 +56,8 @@
   }
 
   function normalize(s) {
-    return (s || '').toLowerCase().replace(/\s+/g, '');
+    if (s === null || s === undefined) return '';
+    return String(s).toLowerCase().replace(/\s+/g, '');
   }
 
   function groupKey(b) {
@@ -79,10 +80,10 @@
 
   function findSameBooks(title, isbn, excludeId) {
     const nt = normalize(title);
-    const cleanIsbn = (isbn || '').replace(/[^0-9Xx]/g, '');
+    const cleanIsbn = String(isbn || '').replace(/[^0-9Xx]/g, '');
     return books.filter(b => {
       if (b.id === excludeId) return false;
-      if (cleanIsbn && b.isbn && b.isbn.replace(/[^0-9Xx]/g, '') === cleanIsbn) return true;
+      if (cleanIsbn && b.isbn && String(b.isbn).replace(/[^0-9Xx]/g, '') === cleanIsbn) return true;
       if (!cleanIsbn && nt && normalize(b.title) === nt) return true;
       return false;
     });
