@@ -4,7 +4,7 @@
 
   const LOCATION_LABEL = { lab: '研究室', home: '自宅' };
   const STATUS_LABEL = { available: '保管中', lent: '貸出中' };
-  const ACQUISITION_LABEL = { self: '自費', lab_budget: '研究費', gift: '献本', unknown: '不明' };
+  const ACQUISITION_LABEL = { self: '自費', lab_budget: '個人研究費', kaken: '科研費', gift: '献本', unknown: 'その他・不明' };
 
   let books = [];
   let filter = 'all'; // all | lab | home | lent
