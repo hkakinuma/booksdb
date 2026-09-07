@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蔵書管理</title>
+<style>
+  :root {
+    --ink: #22282f;
+    --ink-soft: #565f6b;
+    --paper: #eee9df;
+    --paper-raised: #f7f4ec;
+    --rule: #c9c1ae;
+    --lab: #3b6e8f;
+    --lab-soft: #dde7ec;
+    --home: #9c4f37;
+    --home-soft: #f0ded4;
+    --lent: #ad841f;
+    --lent-soft: #f2e6c6;
+    --danger: #a33b2e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Iowan Old Style", "Hiragino Mincho ProN", "Palatino Linotype", Georgia, serif;
+    color: var(--ink);
+    background: var(--paper);
+    margin: 0;
+    padding: 20px 16px 60px;
+  }
+  #app { max-width: 760px; margin: 0 auto; }
+
+  .bt-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 4px; }
+  .bt-title { font-size: 26px; font-weight: 600; }
+  .bt-count { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 12px; color: var(--ink-soft); }
+
+  .bt-toolbar { font-family: -apple-system, "Segoe UI", sans-serif; display: flex; gap: 8px; margin: 16px 0 14px; flex-wrap: wrap; align-items: center; }
+  .bt-search { flex: 1 1 220px; padding: 9px 12px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper-raised); font-size: 14px; font-family: inherit; color: var(--ink); }
+  .bt-filters { display: flex; gap: 6px; }
+  .bt-filter-btn { font-family: -apple-system, "Segoe UI", sans-serif; padding: 8px 12px; border: 1px solid var(--rule); background: var(--paper-raised); border-radius: 3px; font-size: 13px; cursor: pointer; color: var(--ink-soft); }
+  .bt-filter-btn.active { background: var(--ink); color: var(--paper-raised); border-color: var(--ink); }
+  .bt-add-btn { font-family: -apple-system, "Segoe UI", sans-serif; padding: 8px 14px; border: none; background: var(--ink); color: var(--paper-raised); border-radius: 3px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+
+  .bt-form { font-family: -apple-system, "Segoe UI", sans-serif; background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 4px; padding: 16px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .bt-form input, .bt-form select { padding: 8px 10px; border: 1px solid var(--rule); border-radius: 3px; font-size: 13px; font-family: inherit; background: #fff; color: var(--ink); }
+  .bt-full { grid-column: 1 / -1; }
+  .bt-isbn-row { display: flex; gap: 6px; }
+  .bt-isbn-row input { flex: 1; }
+  .bt-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .bt-btn-primary { padding: 8px 14px; border: none; background: var(--lab); color: #fff; border-radius: 3px; font-size: 13px; cursor: pointer; }
+  .bt-btn-ghost { padding: 8px 12px; border: 1px solid var(--rule); background: transparent; border-radius: 3px; font-size: 13px; cursor: pointer; color: var(--ink-soft); white-space: nowrap; }
+
+  .bt-status-info { color: var(--ink-soft); font-size: 12.5px; }
+  .bt-status-ok { color: #2e6b3e; font-size: 12.5px; }
+  .bt-status-warn { color: var(--danger); font-size: 12.5px; }
+  .bt-dup-warning { background: var(--lent-soft); border: 1px solid var(--lent); color: #5c470f; font-size: 13px; padding: 8px 12px; border-radius: 3px; }
+
+  .bt-group { margin-bottom: 6px; }
+  .bt-group-title { font-size: 16px; font-weight: 600; padding: 10px 4px 2px; }
+  .bt-copies { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 12px; color: var(--ink-soft); font-weight: 400; margin-left: 6px; }
+
+  .bt-row { display: flex; align-items: center; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--rule); }
+  .bt-thumb { width: 40px; height: 56px; object-fit: cover; border-radius: 2px; border: 1px solid var(--rule); flex-shrink: 0; background: #fff; }
+  .bt-thumb-placeholder { display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .bt-row-main { flex: 1; min-width: 0; }
+  .bt-row-tags { display: flex; gap: 6px; }
+  .bt-row-meta { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; }
+  .bt-tag { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 11.5px; padding: 3px 9px; border-radius: 2px; white-space: nowrap; font-weight: 600; }
+  .bt-tag-lab { background: var(--lab-soft); color: var(--lab); }
+  .bt-tag-home { background: var(--home-soft); color: var(--home); }
+  .bt-tag-lent { background: var(--lent-soft); color: var(--lent); }
+
+  .bt-row-actions { font-family: -apple-system, "Segoe UI", sans-serif; display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .bt-icon-btn { border: 1px solid var(--rule); background: var(--paper-raised); border-radius: 3px; font-size: 12px; padding: 6px 9px; cursor: pointer; color: var(--ink-soft); }
+  .bt-icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  .bt-empty { font-family: -apple-system, "Segoe UI", sans-serif; padding: 40px 10px; text-align: center; color: var(--ink-soft); font-size: 14px; }
+  .bt-loading { font-family: -apple-system, "Segoe UI", sans-serif; padding: 30px; text-align: center; color: var(--ink-soft); font-size: 13px; }
+
+  .bt-lend-form { font-family: -apple-system, "Segoe UI", sans-serif; display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  .bt-lend-form input { padding: 6px 8px; border: 1px solid var(--rule); border-radius: 3px; font-size: 12.5px; font-family: inherit; }
+
+  .bt-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .bt-modal { background: var(--paper-raised); border-radius: 6px; padding: 16px; width: 100%; max-width: 420px; font-family: -apple-system, "Segoe UI", sans-serif; }
+  .bt-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 600; }
+  #bt-reader { width: 100%; border-radius: 4px; overflow: hidden; background: #000; min-height: 200px; }
+  .bt-modal-hint { font-size: 12px; color: var(--ink-soft); margin-top: 8px; text-align: center; }
+
+  @media (max-width: 480px) {
+    .bt-form { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div id="app"><div class="bt-loading">読み込み中…</div></div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
