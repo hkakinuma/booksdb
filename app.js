@@ -213,7 +213,7 @@
   function renderDupWarningHtml(title, isbn, excludeId) {
     const dupes = findSameBooks(title, isbn, excludeId);
     if (dupes.length === 0) return '';
-    return `<div class="bt-dup-warning">📚 この本はすでに${dupes.length}冊あります: ${dupes.map(d => `${LOCATION_LABEL[d.location]}(${ACQUISITION_LABEL[d.acquisition] || '不明'})`).join('、')} ー そのまま追加できます</div>`;
+    return `<div class="bt-dup-warning">この本はすでに${dupes.length}冊あります: ${dupes.map(d => `${LOCATION_LABEL[d.location]}(${ACQUISITION_LABEL[d.acquisition] || '不明'})`).join('、')} ー そのまま追加できます</div>`;
   }
 
   function updateDupWarningLive() {
@@ -253,10 +253,11 @@
           <option value="home" ${v('location') === 'home' ? 'selected' : ''}>自宅</option>
         </select>
         <select id="bt-input-acquisition">
-          <option value="self" ${v('acquisition', 'self') === 'self' ? 'selected' : ''}>自費</option>
-          <option value="lab_budget" ${v('acquisition') === 'lab_budget' ? 'selected' : ''}>研究費</option>
+          <option value="lab_budget" ${v('acquisition') === 'lab_budget' ? 'selected' : ''}>個人研究費</option>
+          <option value="kaken" ${v('acquisition') === 'kaken' ? 'selected' : ''}>科研費</option>
           <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
-          <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>不明</option>
+          <option value="self" ${v('acquisition', 'self') === 'self' ? 'selected' : ''}>自費</option>
+          <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>その他・不明</option>
         </select>
         <div class="bt-full bt-cover-row">
           <input id="bt-input-coverUrl" type="text" placeholder="書影URL(自動取得できなかった場合は画像URLを直接入力)" value="${escapeHtml(v('coverUrl'))}" />
