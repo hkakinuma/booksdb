@@ -4,7 +4,7 @@
 
   const LOCATION_LABEL = { lab: '研究室', home: '自宅' };
   const STATUS_LABEL = { available: '保管中', lent: '貸出中' };
-  const ACQUISITION_LABEL = { self: '自費', lab_budget: '個人研究費', kaken: '科研費', gift: '献本', unknown: 'その他・不明' };
+  const ACQUISITION_LABEL = { self: '自費', lab_budget: '研究費', gift: '献本', unknown: '不明' };
 
   let books = [];
   let filter = 'all'; // all | lab | home | lent
@@ -181,7 +181,9 @@
   }
 
   function renderRow(b) {
-    const locTag = b.location === 'lab' ? '<span class="bt-tag bt-tag-lab">研究室</span>' : '<span class="bt-tag bt-tag-home">自宅</span>';
+    const locTag = b.location === 'lab'
+      ? `<span class="bt-tag bt-tag-lab bt-tag-swap" data-action="toggle-location" data-id="${b.id}" title="タップで自宅へ移動">研究室 <span class="bt-swap-icon">⇄</span></span>`
+      : `<span class="bt-tag bt-tag-home bt-tag-swap" data-action="toggle-location" data-id="${b.id}" title="タップで研究室へ移動">自宅 <span class="bt-swap-icon">⇄</span></span>`;
     const lentTag = b.status === 'lent' ? '<span class="bt-tag bt-tag-lent">貸出中</span>' : '';
 
     const metaBits = [];
@@ -262,11 +264,10 @@
           <option value="home" ${v('location') === 'home' ? 'selected' : ''}>自宅</option>
         </select>
         <select id="bt-input-acquisition">
-          <option value="lab_budget" ${v('acquisition') === 'lab_budget' ? 'selected' : ''}>個人研究費</option>
-          <option value="kaken" ${v('acquisition') === 'kaken' ? 'selected' : ''}>科研費</option>
-          <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
           <option value="self" ${v('acquisition', 'self') === 'self' ? 'selected' : ''}>自費</option>
-          <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>その他・不明</option>
+          <option value="lab_budget" ${v('acquisition') === 'lab_budget' ? 'selected' : ''}>研究費</option>
+          <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
+          <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>不明</option>
         </select>
         <div class="bt-full bt-cover-row">
           <input id="bt-input-coverUrl" type="text" placeholder="書影URL(自動取得できなかった場合は画像URLを直接入力)" value="${escapeHtml(v('coverUrl'))}" />
@@ -370,6 +371,11 @@
           btn.disabled = true; btn.textContent = '処理中…';
           returnBook(id);
         }
+        else if (action === 'toggle-location') {
+          btn.style.pointerEvents = 'none';
+          btn.style.opacity = '0.5';
+          toggleLocationAction(id);
+        }
       });
     });
 
@@ -468,6 +474,14 @@
 
   async function returnBook(id) {
     await apiPost('return', { id });
+    await loadBooks();
+  }
+
+  async function toggleLocationAction(id) {
+    const book = books.find(b => b.id === id);
+    if (!book) return;
+    const newLocation = book.location === 'lab' ? 'home' : 'lab';
+    await apiPost('update', { id, location: newLocation });
     await loadBooks();
   }
 
