@@ -1,7 +1,8 @@
-// ここだけ編集してください。
-// API_URL: Apps Script を「ウェブアプリ」としてデプロイした時に発行される URL (.../exec で終わるもの)
-// TOKEN:   Code.gs の SHARED_SECRET と同じ文字列にする（合言葉）
+// このファイルの中身は GitHub Actions のビルド時に自動生成されるため、
+// リポジトリに手動でTOKENやURLを書く必要はありません（書かないでください）。
+// 実際の値は Settings → Secrets and variables → Actions に登録した
+// APP_API_URL / APP_TOKEN から、デプロイのたびに自動で差し込まれます。
 window.CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbzTenWeefPybQrJhfwIKa41n1MaUnLoBRI8VQsAb-y-zTqASYVf3dS5trdLGCNqrYe7/exec',
-  TOKEN: 'w@YNJxdqv67TAZeQw&yQ'
+  API_URL: 'PLACEHOLDER_DO_NOT_EDIT',
+  TOKEN: 'PLACEHOLDER_DO_NOT_EDIT'
 };
