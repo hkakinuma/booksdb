@@ -1,6 +1,6 @@
 (function () {
   const API_URL = window.CONFIG.API_URL;
-  const TOKEN = window.CONFIG.TOKEN;
+  let authToken = localStorage.getItem('bt_auth_token') || '';
 
   const LOCATION_LABEL = { lab: '研究室', home: '自宅' };
   const STATUS_LABEL = { available: '保管中', lent: '貸出中' };
@@ -27,7 +27,7 @@
   async function apiGet(action, params) {
     const url = new URL(API_URL);
     url.searchParams.set('action', action);
-    url.searchParams.set('token', TOKEN);
+    url.searchParams.set('token', authToken);
     Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
     const res = await fetch(url.toString());
     return res.json();
@@ -37,7 +37,7 @@
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // プリフライトを避けるため text/plain で送る
-      body: JSON.stringify({ action, token: TOKEN, book: book || {} })
+      body: JSON.stringify({ action, token: authToken, book: book || {} })
     });
     return res.json();
   }
@@ -46,12 +46,56 @@
     root.innerHTML = '<div class="bt-loading">読み込み中…</div>';
     try {
       const res = await apiGet('list');
-      if (!res.ok) throw new Error(res.error || '読み込みに失敗しました');
+      if (!res.ok) {
+        if (res.error && res.error.indexOf('unauthorized') !== -1) {
+          showLogin();
+          return;
+        }
+        throw new Error(res.error || '読み込みに失敗しました');
+      }
       books = res.books;
       render();
     } catch (e) {
-      root.innerHTML = `<div class="bt-loading">読み込みエラー: ${escapeHtml(String(e.message || e))}<br>config.js の API_URL / TOKEN を確認してください。</div>`;
+      root.innerHTML = `<div class="bt-loading">読み込みエラー: ${escapeHtml(String(e.message || e))}<br>しばらくしてから再読み込みしてください。</div>`;
     }
+  }
+
+  function showLogin(errorMsg) {
+    root.innerHTML = `
+      <div class="bt-login">
+        <div class="bt-login-title">蔵書管理</div>
+        <div class="bt-login-sub">パスワードを入力してください</div>
+        ${errorMsg ? `<div class="bt-status-warn">${escapeHtml(errorMsg)}</div>` : ''}
+        <input type="password" id="bt-login-password" class="bt-login-input" placeholder="パスワード" />
+        <button class="bt-btn-primary" id="bt-login-submit">入る</button>
+      </div>
+    `;
+    const submitBtn = document.getElementById('bt-login-submit');
+    const pwInput = document.getElementById('bt-login-password');
+
+    const doLogin = async () => {
+      const pw = pwInput.value;
+      if (!pw) return;
+      authToken = pw;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '確認中…';
+      try {
+        const res = await apiGet('list');
+        if (res.ok) {
+          localStorage.setItem('bt_auth_token', pw);
+          books = res.books;
+          render();
+        } else {
+          showLogin('パスワードが違います');
+        }
+      } catch (e) {
+        showLogin('通信エラーが発生しました。もう一度お試しください');
+      }
+    };
+
+    submitBtn.addEventListener('click', doLogin);
+    pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+    pwInput.focus();
   }
 
   // ---------- ユーティリティ ----------
@@ -134,7 +178,7 @@
     root.innerHTML = `
       <div class="bt-header">
         <div class="bt-title">蔵書管理</div>
-        <div class="bt-count">全 ${books.length} 冊 / 貸出中 ${countLent} 冊</div>
+        <div class="bt-count">全 ${books.length} 冊 / 貸出中 ${countLent} 冊 ・ <span class="bt-logout-link" id="bt-logout">ログアウト</span></div>
       </div>
       <div class="bt-sticky-header">
         <div class="bt-toolbar">
@@ -357,6 +401,15 @@
     const sortEl = document.getElementById('bt-sort');
     if (sortEl) {
       sortEl.addEventListener('change', (e) => { sortBy = e.target.value; render(); });
+    }
+
+    const logoutLink = document.getElementById('bt-logout');
+    if (logoutLink) {
+      logoutLink.addEventListener('click', () => {
+        localStorage.removeItem('bt_auth_token');
+        authToken = '';
+        showLogin();
+      });
     }
 
     const toggleSelectBtn = document.getElementById('bt-toggle-select');
