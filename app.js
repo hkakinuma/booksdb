@@ -239,17 +239,17 @@
 
     return `
       <div class="bt-group">
-        <div class="bt-group-header">
+        <div class="bt-group-content">
           ${thumb}
-          <div>
+          <div class="bt-group-body">
             <div class="bt-group-title">
               ${escapeHtml(first.title)}
               ${multi ? `<span class="bt-copies">(${items.length}冊)</span>` : ''}
             </div>
             ${infoBits.length ? `<div class="bt-group-meta">${infoBits.join(' ／ ')}</div>` : ''}
+            <div class="bt-group-rows">${items.map(renderRow).join('')}</div>
           </div>
         </div>
-        <div class="bt-group-rows">${items.map(renderRow).join('')}</div>
       </div>
     `;
   }

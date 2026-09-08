@@ -82,13 +82,14 @@
   .bt-dup-warning { background: var(--lent-soft); border: 1px solid var(--lent); color: #5c470f; font-size: 13px; padding: 8px 12px; border-radius: 3px; }
 
   .bt-group { margin-bottom: 10px; }
-  .bt-group-header { display: flex; align-items: center; gap: 10px; padding: 10px 4px 4px; }
+  .bt-group-content { display: flex; gap: 10px; align-items: flex-start; padding: 10px 4px 4px; }
+  .bt-group-body { flex: 1; min-width: 0; }
   .bt-group-title { font-size: 16px; font-weight: 600; }
   .bt-group-meta { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
   .bt-copies { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 12px; color: var(--ink-soft); font-weight: 400; margin-left: 6px; }
-  .bt-group-rows { margin-left: 86px; }
+  .bt-group-rows { margin-top: 6px; }
 
-  .bt-row { display: flex; align-items: center; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--rule); }
+  .bt-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--rule); }
   .bt-thumb { width: 76px; height: 106px; object-fit: cover; border-radius: 3px; border: 1px solid var(--rule); flex-shrink: 0; background: #fff; }
   .bt-thumb-placeholder { display: flex; align-items: center; justify-content: center; font-size: 32px; }
   .bt-row-main { flex: 1; min-width: 0; }
@@ -135,7 +136,6 @@
 
   @media (max-width: 480px) {
     .bt-form { grid-template-columns: 1fr; }
-    .bt-group-rows { margin-left: 0; }
   }
 
   #bt-top-btn {
