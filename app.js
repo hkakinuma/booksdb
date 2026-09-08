@@ -310,6 +310,11 @@
     `;
   }
 
+  function scrollToForm() {
+    const formEl = document.querySelector('.bt-form');
+    if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function renderDupWarningHtml(title, isbn, excludeId) {
     const dupes = findSameBooks(title, isbn, excludeId);
     if (dupes.length === 0) return '';
@@ -448,6 +453,7 @@
     if (openAddBtn) {
       openAddBtn.addEventListener('click', () => {
         showForm = true; editingId = null; render();
+        scrollToForm();
         const isbnInput = document.getElementById('bt-input-isbn');
         if (isbnInput) isbnInput.focus(); // USBリーダーはここにフォーカスがあれば直接入力される
       });
@@ -492,7 +498,7 @@
       btn.addEventListener('click', () => {
         const action = btn.getAttribute('data-action');
         const id = btn.getAttribute('data-id');
-        if (action === 'edit') { editingId = id; showForm = true; render(); }
+        if (action === 'edit') { editingId = id; showForm = true; render(); scrollToForm(); }
         else if (action === 'delete') {
           if (!confirm('この本を削除しますか？')) return;
           btn.disabled = true; btn.textContent = '削除中…';
