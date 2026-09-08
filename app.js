@@ -18,6 +18,7 @@
   let isComposingSearch = false;
   let selectionMode = false;
   let selectedIds = new Set();
+  let expandedMemoIds = new Set();
 
   const root = document.getElementById('app');
 
@@ -137,7 +138,7 @@
       </div>
       <div class="bt-sticky-header">
         <div class="bt-toolbar">
-          <input class="bt-search" id="bt-search" type="text" placeholder="タイトル・著者・ISBNで検索(購入前チェックにも)" value="${escapeHtml(query)}" />
+          <input class="bt-search" id="bt-search" type="text" value="${escapeHtml(query)}" />
           <div class="bt-filters">
             <button class="bt-filter-btn ${filter === 'all' ? 'active' : ''}" data-filter="all">すべて</button>
             <button class="bt-filter-btn ${filter === 'lab' ? 'active' : ''}" data-filter="lab">研究室</button>
@@ -222,6 +223,15 @@
     const metaBits = [];
     if (b.status === 'lent' && b.borrower) metaBits.push(`→ ${escapeHtml(b.borrower)}${b.lentDate ? ' (' + escapeHtml(b.lentDate) + '〜)' : ''}`);
 
+    let memoHtml = '';
+    if (b.memo) {
+      if (expandedMemoIds.has(b.id)) {
+        memoHtml = `<div class="bt-row-note" data-action="toggle-memo" data-id="${b.id}">${escapeHtml(b.memo)} <span class="bt-memo-toggle">(閉じる)</span></div>`;
+      } else {
+        memoHtml = `<div class="bt-row-note-toggle" data-action="toggle-memo" data-id="${b.id}">メモを表示</div>`;
+      }
+    }
+
     const lendFormHtml = lendingId === b.id ? `
       <div class="bt-lend-form">
         <input id="bt-borrower-input" type="text" placeholder="貸出先の名前" />
@@ -248,7 +258,7 @@
         <div class="bt-row-main">
           <div class="bt-row-tags">${locTag}${lentTag}${acquisitionText}</div>
           ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ／ ')}</div>` : ''}
-          ${b.memo ? `<div class="bt-row-note">${escapeHtml(b.memo)}</div>` : ''}
+          ${memoHtml}
           ${lendFormHtml}
         </div>
         ${rowActionsHtml}
@@ -444,6 +454,10 @@
           btn.style.pointerEvents = 'none';
           btn.style.opacity = '0.5';
           toggleLocationAction(id);
+        }
+        else if (action === 'toggle-memo') {
+          if (expandedMemoIds.has(id)) expandedMemoIds.delete(id); else expandedMemoIds.add(id);
+          render();
         }
       });
     });
