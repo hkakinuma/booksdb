@@ -54,7 +54,9 @@
   }
   .bt-bulk-count { font-weight: 600; color: var(--ink); }
   .bt-row-checkbox { width: 18px; height: 18px; flex-shrink: 0; }
-  .bt-search { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper-raised); font-size: 16px; font-family: inherit; color: var(--ink); }
+  .bt-search-wrap { position: relative; flex: 1 1 220px; min-width: 0; }
+  .bt-search { width: 100%; min-width: 0; padding: 9px 30px 9px 12px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper-raised); font-size: 16px; font-family: inherit; color: var(--ink); }
+  .bt-search-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: none; background: transparent; font-size: 18px; line-height: 1; color: var(--ink-soft); cursor: pointer; padding: 4px; }
   .bt-filters { display: flex; gap: 6px; }
   .bt-filter-btn { font-family: -apple-system, "Segoe UI", sans-serif; padding: 8px 12px; border: 1px solid var(--rule); background: var(--paper-raised); border-radius: 3px; font-size: 13px; cursor: pointer; color: var(--ink-soft); }
   .bt-filter-btn.active { background: var(--ink); color: var(--paper-raised); border-color: var(--ink); }

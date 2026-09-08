@@ -182,7 +182,10 @@
       </div>
       <div class="bt-sticky-header">
         <div class="bt-toolbar">
-          <input class="bt-search" id="bt-search" type="text" value="${escapeHtml(query)}" />
+          <div class="bt-search-wrap">
+            <input class="bt-search" id="bt-search" type="text" value="${escapeHtml(query)}" />
+            ${query ? `<button type="button" class="bt-search-clear" id="bt-search-clear" aria-label="検索をクリア">×</button>` : ''}
+          </div>
           <div class="bt-filters">
             <button class="bt-filter-btn ${filter === 'all' ? 'active' : ''}" data-filter="all">すべて</button>
             <button class="bt-filter-btn ${filter === 'lab' ? 'active' : ''}" data-filter="lab">研究室</button>
@@ -396,6 +399,16 @@
         render();
         const el = document.getElementById('bt-search');
         if (el) { el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+      });
+    }
+
+    const clearSearchBtn = document.getElementById('bt-search-clear');
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener('click', () => {
+        query = '';
+        render();
+        const el = document.getElementById('bt-search');
+        if (el) el.focus();
       });
     }
 
