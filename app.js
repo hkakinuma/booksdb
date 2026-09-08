@@ -4,7 +4,7 @@
 
   const LOCATION_LABEL = { lab: '研究室', home: '自宅' };
   const STATUS_LABEL = { available: '保管中', lent: '貸出中' };
-  const ACQUISITION_LABEL = { lab_budget: '個人研究費', kaken: '科研費', gift: '献本', self: '自費', unknown: 'その他・不明' };
+  const ACQUISITION_LABEL = { lab_budget: '個人研究費', kaken: '科研費', gift: '献本', self: '私費', unknown: 'その他' };
 
   let books = [];
   let filter = 'all'; // all | lab | home | lent
@@ -361,8 +361,8 @@
           <option value="lab_budget" ${v('acquisition', 'lab_budget') === 'lab_budget' ? 'selected' : ''}>個人研究費</option>
           <option value="kaken" ${v('acquisition') === 'kaken' ? 'selected' : ''}>科研費</option>
           <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
-          <option value="self" ${v('acquisition') === 'self' ? 'selected' : ''}>自費</option>
-          <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>その他・不明</option>
+          <option value="self" ${v('acquisition') === 'self' ? 'selected' : ''}>私費</option>
+          <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>その他</option>
         </select>
         <div class="bt-full bt-cover-row">
           <input id="bt-input-coverUrl" type="text" placeholder="書影URL(自動取得できなかった場合は画像URLを直接入力)" value="${escapeHtml(v('coverUrl'))}" />
