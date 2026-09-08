@@ -16,6 +16,8 @@
   let scannerInstance = null;
   let lookupTimer = null;
   let isComposingSearch = false;
+  let selectionMode = false;
+  let selectedIds = new Set();
 
   const root = document.getElementById('app');
 
@@ -133,21 +135,25 @@
         <div class="bt-title">蔵書管理</div>
         <div class="bt-count">全 ${books.length} 冊 / 貸出中 ${countLent} 冊</div>
       </div>
-      <div class="bt-toolbar">
-        <input class="bt-search" id="bt-search" type="text" placeholder="タイトル・著者・ISBNで検索(購入前チェックにも)" value="${escapeHtml(query)}" />
-        <div class="bt-filters">
-          <button class="bt-filter-btn ${filter === 'all' ? 'active' : ''}" data-filter="all">すべて</button>
-          <button class="bt-filter-btn ${filter === 'lab' ? 'active' : ''}" data-filter="lab">研究室</button>
-          <button class="bt-filter-btn ${filter === 'home' ? 'active' : ''}" data-filter="home">自宅</button>
-          <button class="bt-filter-btn ${filter === 'lent' ? 'active' : ''}" data-filter="lent">貸出中</button>
+      <div class="bt-sticky-header">
+        <div class="bt-toolbar">
+          <input class="bt-search" id="bt-search" type="text" placeholder="タイトル・著者・ISBNで検索(購入前チェックにも)" value="${escapeHtml(query)}" />
+          <div class="bt-filters">
+            <button class="bt-filter-btn ${filter === 'all' ? 'active' : ''}" data-filter="all">すべて</button>
+            <button class="bt-filter-btn ${filter === 'lab' ? 'active' : ''}" data-filter="lab">研究室</button>
+            <button class="bt-filter-btn ${filter === 'home' ? 'active' : ''}" data-filter="home">自宅</button>
+            <button class="bt-filter-btn ${filter === 'lent' ? 'active' : ''}" data-filter="lent">貸出中</button>
+          </div>
+          <select class="bt-sort-select" id="bt-sort">
+            <option value="registered_desc" ${sortBy === 'registered_desc' ? 'selected' : ''}>登録が新しい順</option>
+            <option value="registered_asc" ${sortBy === 'registered_asc' ? 'selected' : ''}>登録が古い順</option>
+            <option value="year_desc" ${sortBy === 'year_desc' ? 'selected' : ''}>刊行年が新しい順</option>
+            <option value="year_asc" ${sortBy === 'year_asc' ? 'selected' : ''}>刊行年が古い順</option>
+          </select>
+          ${!showForm ? `<button class="bt-btn-ghost" id="bt-toggle-select">${selectionMode ? '選択をやめる' : '一括選択'}</button>` : ''}
+          ${!showForm && !selectionMode ? '<button class="bt-add-btn" id="bt-open-add">+ 本を追加</button>' : ''}
         </div>
-        <select class="bt-sort-select" id="bt-sort">
-          <option value="registered_desc" ${sortBy === 'registered_desc' ? 'selected' : ''}>登録が新しい順</option>
-          <option value="registered_asc" ${sortBy === 'registered_asc' ? 'selected' : ''}>登録が古い順</option>
-          <option value="year_desc" ${sortBy === 'year_desc' ? 'selected' : ''}>刊行年が新しい順</option>
-          <option value="year_asc" ${sortBy === 'year_asc' ? 'selected' : ''}>刊行年が古い順</option>
-        </select>
-        ${!showForm ? '<button class="bt-add-btn" id="bt-open-add">+ 本を追加</button>' : ''}
+        ${selectionMode ? renderBulkBar() : ''}
       </div>
       ${showForm ? renderForm() : ''}
       ${order.length === 0
@@ -158,6 +164,17 @@
     `;
 
     attachEvents();
+  }
+
+  function renderBulkBar() {
+    const count = selectedIds.size;
+    return `
+      <div class="bt-bulk-bar">
+        <span class="bt-bulk-count">${count}冊選択中</span>
+        <button class="bt-btn-ghost" id="bt-bulk-lab" ${count === 0 ? 'disabled' : ''}>研究室へ移動</button>
+        <button class="bt-btn-ghost" id="bt-bulk-home" ${count === 0 ? 'disabled' : ''}>自宅へ移動</button>
+      </div>
+    `;
   }
 
   function renderGroup(items) {
@@ -198,8 +215,11 @@
       : `<span class="bt-tag bt-tag-home bt-tag-swap" data-action="toggle-location" data-id="${b.id}" title="タップで研究室へ移動">自宅 <span class="bt-swap-icon">⇄</span></span>`;
     const lentTag = b.status === 'lent' ? '<span class="bt-tag bt-tag-lent">貸出中</span>' : '';
 
+    const acquisitionText = ACQUISITION_LABEL[b.acquisition]
+      ? `<span class="bt-acquisition-inline">${escapeHtml(ACQUISITION_LABEL[b.acquisition])}</span>`
+      : '';
+
     const metaBits = [];
-    if (ACQUISITION_LABEL[b.acquisition]) metaBits.push(ACQUISITION_LABEL[b.acquisition]);
     if (b.status === 'lent' && b.borrower) metaBits.push(`→ ${escapeHtml(b.borrower)}${b.lentDate ? ' (' + escapeHtml(b.lentDate) + '〜)' : ''}`);
 
     const lendFormHtml = lendingId === b.id ? `
@@ -209,20 +229,28 @@
         <button class="bt-icon-btn" id="bt-cancel-lend">キャンセル</button>
       </div>` : '';
 
-    return `
-      <div class="bt-row">
-        <div class="bt-row-main">
-          <div class="bt-row-tags">${locTag}${lentTag}</div>
-          ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ／ ')}</div>` : ''}
-          ${lendFormHtml}
-        </div>
+    const checkboxHtml = selectionMode
+      ? `<input type="checkbox" class="bt-row-checkbox" data-id="${b.id}" ${selectedIds.has(b.id) ? 'checked' : ''} />`
+      : '';
+
+    const rowActionsHtml = selectionMode ? '' : `
         <div class="bt-row-actions">
           ${b.status === 'lent'
             ? `<button class="bt-icon-btn" data-action="return" data-id="${b.id}">返却済み</button>`
             : `<button class="bt-icon-btn" data-action="lend" data-id="${b.id}">貸出</button>`}
           <button class="bt-icon-btn" data-action="edit" data-id="${b.id}">編集</button>
           <button class="bt-icon-btn danger" data-action="delete" data-id="${b.id}">削除</button>
+        </div>`;
+
+    return `
+      <div class="bt-row">
+        ${checkboxHtml}
+        <div class="bt-row-main">
+          <div class="bt-row-tags">${locTag}${lentTag}${acquisitionText}</div>
+          ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ／ ')}</div>` : ''}
+          ${lendFormHtml}
         </div>
+        ${rowActionsHtml}
       </div>
     `;
   }
@@ -317,6 +345,38 @@
     const sortEl = document.getElementById('bt-sort');
     if (sortEl) {
       sortEl.addEventListener('change', (e) => { sortBy = e.target.value; render(); });
+    }
+
+    const toggleSelectBtn = document.getElementById('bt-toggle-select');
+    if (toggleSelectBtn) {
+      toggleSelectBtn.addEventListener('click', () => {
+        selectionMode = !selectionMode;
+        if (!selectionMode) selectedIds.clear();
+        render();
+      });
+    }
+
+    document.querySelectorAll('.bt-row-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const id = cb.getAttribute('data-id');
+        if (cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+        render();
+      });
+    });
+
+    const bulkLabBtn = document.getElementById('bt-bulk-lab');
+    if (bulkLabBtn) {
+      bulkLabBtn.addEventListener('click', () => {
+        bulkLabBtn.disabled = true; bulkLabBtn.textContent = '移動中…';
+        bulkMoveLocation('lab');
+      });
+    }
+    const bulkHomeBtn = document.getElementById('bt-bulk-home');
+    if (bulkHomeBtn) {
+      bulkHomeBtn.addEventListener('click', () => {
+        bulkHomeBtn.disabled = true; bulkHomeBtn.textContent = '移動中…';
+        bulkMoveLocation('home');
+      });
     }
 
     const openAddBtn = document.getElementById('bt-open-add');
@@ -489,6 +549,15 @@
     if (!book) return;
     const newLocation = book.location === 'lab' ? 'home' : 'lab';
     await apiPost('update', { id, location: newLocation });
+    await loadBooks();
+  }
+
+  async function bulkMoveLocation(newLocation) {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    await Promise.all(ids.map(id => apiPost('update', { id, location: newLocation })));
+    selectedIds.clear();
+    selectionMode = false;
     await loadBooks();
   }
 
