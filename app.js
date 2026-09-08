@@ -71,7 +71,7 @@
   function matchesQuery(b) {
     if (!query) return true;
     const q = normalize(query);
-    return normalize(b.title).includes(q) || normalize(b.author).includes(q) || normalize(b.isbn).includes(q);
+    return normalize(b.title).includes(q) || normalize(b.author).includes(q) || normalize(b.isbn).includes(q) || normalize(b.memo).includes(q);
   }
 
   function matchesFilter(b) {
@@ -248,6 +248,7 @@
         <div class="bt-row-main">
           <div class="bt-row-tags">${locTag}${lentTag}${acquisitionText}</div>
           ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ／ ')}</div>` : ''}
+          ${b.memo ? `<div class="bt-row-note">${escapeHtml(b.memo)}</div>` : ''}
           ${lendFormHtml}
         </div>
         ${rowActionsHtml}
@@ -308,6 +309,7 @@
           <input id="bt-input-coverUrl" type="text" placeholder="書影URL(自動取得できなかった場合は画像URLを直接入力)" value="${escapeHtml(v('coverUrl'))}" />
           <img id="bt-cover-preview" class="bt-thumb" src="${escapeHtml(v('coverUrl'))}" alt="" style="${v('coverUrl') ? '' : 'display:none;'}" onerror="this.style.display='none'" />
         </div>
+        <textarea class="bt-full" id="bt-input-memo" placeholder="メモ・タグ(自由記述、検索対象になります。例: #統計学 #教科書 のように書いておくと後で分類しやすいです)">${escapeHtml(v('memo'))}</textarea>
         <div class="bt-form-actions bt-full">
           <button class="bt-btn-ghost" id="bt-cancel-form">キャンセル</button>
           <button class="bt-btn-primary" id="bt-save-form">${editing ? '更新する' : '登録する'}</button>
@@ -506,7 +508,8 @@
       isbn: document.getElementById('bt-input-isbn').value.trim(),
       coverUrl: document.getElementById('bt-input-coverUrl').value.trim(),
       location: document.getElementById('bt-input-location').value,
-      acquisition: document.getElementById('bt-input-acquisition').value
+      acquisition: document.getElementById('bt-input-acquisition').value,
+      memo: document.getElementById('bt-input-memo').value.trim()
     };
 
     const saveBtn = document.getElementById('bt-save-form');
