@@ -21,17 +21,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build site (config.js はこのステップでだけ生成し、リポジトリには含めない)
+      - name: Build site (config.js には API_URL だけを書き込む。TOKENはもう埋め込まない)
         env:
           APP_API_URL: ${{ secrets.APP_API_URL }}
-          APP_TOKEN: ${{ secrets.APP_TOKEN }}
         run: |
           mkdir -p dist
           cp index.html app.js robots.txt dist/
           cat > dist/config.js << EOF
           window.CONFIG = {
-            API_URL: '${APP_API_URL}',
-            TOKEN: '${APP_TOKEN}'
+            API_URL: '${APP_API_URL}'
           };
           EOF
 
