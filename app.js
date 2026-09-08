@@ -4,7 +4,7 @@
 
   const LOCATION_LABEL = { lab: '研究室', home: '自宅' };
   const STATUS_LABEL = { available: '保管中', lent: '貸出中' };
-  const ACQUISITION_LABEL = { self: '自費', lab_budget: '個人研究費', kaken: '科研費', gift: '献本', unknown: 'その他・不明' };
+  const ACQUISITION_LABEL = { lab_budget: '個人研究費', kaken: '科研費', gift: '献本', self: '自費', unknown: 'その他・不明' };
 
   let books = [];
   let filter = 'all'; // all | lab | home | lent
@@ -166,13 +166,25 @@
     const thumb = first.coverUrl
       ? `<img class="bt-thumb" src="${escapeHtml(first.coverUrl)}" alt="" onerror="this.style.display='none'" />`
       : `<div class="bt-thumb bt-thumb-placeholder">📕</div>`;
+
+    const infoBits = [];
+    if (first.author) infoBits.push(escapeHtml(first.author));
+    let pubBit = '';
+    if (first.publisher && first.publishedYear) pubBit = `${first.publisher} (${first.publishedYear})`;
+    else if (first.publisher) pubBit = first.publisher;
+    else if (first.publishedYear) pubBit = `(${first.publishedYear})`;
+    if (pubBit) infoBits.push(escapeHtml(pubBit));
+
     return `
       <div class="bt-group">
         <div class="bt-group-header">
           ${thumb}
-          <div class="bt-group-title">
-            ${escapeHtml(first.title)}
-            ${multi ? `<span class="bt-copies">(${items.length}冊)</span>` : ''}
+          <div>
+            <div class="bt-group-title">
+              ${escapeHtml(first.title)}
+              ${multi ? `<span class="bt-copies">(${items.length}冊)</span>` : ''}
+            </div>
+            ${infoBits.length ? `<div class="bt-group-meta">${infoBits.join(' ／ ')}</div>` : ''}
           </div>
         </div>
         <div class="bt-group-rows">${items.map(renderRow).join('')}</div>
@@ -187,12 +199,6 @@
     const lentTag = b.status === 'lent' ? '<span class="bt-tag bt-tag-lent">貸出中</span>' : '';
 
     const metaBits = [];
-    if (b.author) metaBits.push(escapeHtml(b.author));
-    let pubBit = '';
-    if (b.publisher && b.publishedYear) pubBit = `${b.publisher}(${b.publishedYear})`;
-    else if (b.publisher) pubBit = b.publisher;
-    else if (b.publishedYear) pubBit = `(${b.publishedYear})`;
-    if (pubBit) metaBits.push(escapeHtml(pubBit));
     if (ACQUISITION_LABEL[b.acquisition]) metaBits.push(ACQUISITION_LABEL[b.acquisition]);
     if (b.status === 'lent' && b.borrower) metaBits.push(`→ ${escapeHtml(b.borrower)}${b.lentDate ? ' (' + escapeHtml(b.lentDate) + '〜)' : ''}`);
 
@@ -207,7 +213,7 @@
       <div class="bt-row">
         <div class="bt-row-main">
           <div class="bt-row-tags">${locTag}${lentTag}</div>
-          ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ・ ')}</div>` : ''}
+          ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ／ ')}</div>` : ''}
           ${lendFormHtml}
         </div>
         <div class="bt-row-actions">
@@ -264,10 +270,10 @@
           <option value="home" ${v('location') === 'home' ? 'selected' : ''}>自宅</option>
         </select>
         <select id="bt-input-acquisition">
-          <option value="lab_budget" ${v('acquisition') === 'lab_budget' ? 'selected' : ''}>個人研究費</option>
+          <option value="lab_budget" ${v('acquisition', 'lab_budget') === 'lab_budget' ? 'selected' : ''}>個人研究費</option>
           <option value="kaken" ${v('acquisition') === 'kaken' ? 'selected' : ''}>科研費</option>
           <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
-          <option value="self" ${v('acquisition', 'self') === 'self' ? 'selected' : ''}>自費</option>
+          <option value="self" ${v('acquisition') === 'self' ? 'selected' : ''}>自費</option>
           <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>その他・不明</option>
         </select>
         <div class="bt-full bt-cover-row">
