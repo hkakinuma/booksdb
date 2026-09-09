@@ -574,7 +574,13 @@
       if (yearEl && !yearEl.value) yearEl.value = res.publishedYear || '';
       if (coverEl && !coverEl.value) coverEl.value = res.coverUrl || '';
       if (coverEl) updateCoverPreview(coverEl.value);
-      if (statusEl) statusEl.innerHTML = `<span class="bt-status-ok">${escapeHtml(res.title)} を見つけました (${res.source})</span>`;
+      if (statusEl) {
+        if (res.title) {
+          statusEl.innerHTML = `<span class="bt-status-ok">${escapeHtml(res.title)} を見つけました (${res.source})</span>`;
+        } else if (res.coverUrl) {
+          statusEl.innerHTML = `<span class="bt-status-ok">書誌情報は見つかりませんでしたが、書影は取得できました</span>`;
+        }
+      }
 
       updateDupWarningLive();
     } catch (e) {
