@@ -19,6 +19,10 @@
   let selectionMode = false;
   let selectedIds = new Set();
   let expandedMemoIds = new Set();
+  let renderLimit = 60; // 一度に描画するグループ数(スクロールで増える)
+  let loadMoreObserver = null;
+
+  function resetRenderLimit() { renderLimit = 60; }
 
   const root = document.getElementById('app');
 
@@ -175,6 +179,9 @@
 
     const countLent = books.filter(b => b.status === 'lent').length;
 
+    const visibleOrder = order.slice(0, renderLimit);
+    const hasMore = order.length > renderLimit;
+
     root.innerHTML = `
       <div class="bt-header">
         <div class="bt-title">蔵書管理</div>
@@ -206,12 +213,30 @@
       ${showForm ? renderForm() : ''}
       ${order.length === 0
         ? `<div class="bt-empty">${books.length === 0 ? 'まだ本が登録されていません。「+ 本を追加」から登録してください。' : '該当する本がありません。'}</div>`
-        : `<div class="bt-list">${order.map(k => renderGroup(groups[k])).join('')}</div>`
+        : `<div class="bt-list">${visibleOrder.map(k => renderGroup(groups[k])).join('')}</div>`
       }
+      ${hasMore ? '<div id="bt-load-more-sentinel" class="bt-load-more">読み込み中…</div>' : ''}
       <div id="bt-scanner-modal"></div>
     `;
 
     attachEvents();
+    setupLoadMoreObserver();
+  }
+
+  function setupLoadMoreObserver() {
+    const sentinel = document.getElementById('bt-load-more-sentinel');
+    if (!sentinel) return;
+    if (!loadMoreObserver) {
+      loadMoreObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            renderLimit += 60;
+            render();
+          }
+        });
+      }, { rootMargin: '600px' });
+    }
+    loadMoreObserver.observe(sentinel);
   }
 
   function renderBulkBar() {
@@ -229,7 +254,7 @@
     const first = items[0];
     const multi = items.length > 1;
     const thumb = first.coverUrl
-      ? `<img class="bt-thumb" src="${escapeHtml(first.coverUrl)}" alt="" onerror="this.style.display='none'" />`
+      ? `<img class="bt-thumb" src="${escapeHtml(first.coverUrl)}" alt="" loading="lazy" onerror="this.style.display='none'" />`
       : `<div class="bt-thumb bt-thumb-placeholder">📕</div>`;
 
     const infoBits = [];
@@ -389,6 +414,7 @@
       searchEl.addEventListener('compositionend', (e) => {
         isComposingSearch = false;
         query = e.target.value;
+        resetRenderLimit();
         render();
         const el = document.getElementById('bt-search');
         if (el) { el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
@@ -396,6 +422,7 @@
       searchEl.addEventListener('input', (e) => {
         if (isComposingSearch) return; // 日本語入力の変換確定前は再描画しない(IMEが確定されてしまうのを防ぐ)
         query = e.target.value;
+        resetRenderLimit();
         render();
         const el = document.getElementById('bt-search');
         if (el) { el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
@@ -406,6 +433,7 @@
     if (clearSearchBtn) {
       clearSearchBtn.addEventListener('click', () => {
         query = '';
+        resetRenderLimit();
         render();
         const el = document.getElementById('bt-search');
         if (el) el.focus();
@@ -413,12 +441,12 @@
     }
 
     document.querySelectorAll('.bt-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => { filter = btn.getAttribute('data-filter'); render(); });
+      btn.addEventListener('click', () => { filter = btn.getAttribute('data-filter'); resetRenderLimit(); render(); });
     });
 
     const sortEl = document.getElementById('bt-sort');
     if (sortEl) {
-      sortEl.addEventListener('change', (e) => { sortBy = e.target.value; render(); });
+      sortEl.addEventListener('change', (e) => { sortBy = e.target.value; resetRenderLimit(); render(); });
     }
 
     const logoutLink = document.getElementById('bt-logout');
