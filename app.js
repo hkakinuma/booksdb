@@ -639,6 +639,20 @@
     }
   }
 
+  function applyMutationResult(res) {
+    if (res && res.lastUpdated) lastUpdated = res.lastUpdated;
+  }
+
+  function upsertLocalBook(book) {
+    if (!book || !book.id) return;
+    const idx = books.findIndex(b => b.id === book.id);
+    if (idx >= 0) books[idx] = book; else books.push(book);
+  }
+
+  function removeLocalBook(id) {
+    books = books.filter(b => b.id !== id);
+  }
+
   async function saveForm() {
     const title = document.getElementById('bt-input-title').value.trim();
     if (!title) { document.getElementById('bt-input-title').focus(); return; }
@@ -660,13 +674,17 @@
     saveBtn.textContent = '保存中…';
 
     try {
+      let res;
       if (editingId) {
-        await apiPost('update', Object.assign({ id: editingId }, book));
+        res = await apiPost('update', Object.assign({ id: editingId }, book));
       } else {
-        await apiPost('add', book);
+        res = await apiPost('add', book);
       }
+      if (!res.ok) throw new Error(res.error || '保存に失敗しました');
+      upsertLocalBook(res.book);
+      applyMutationResult(res);
       showForm = false; editingId = null;
-      await loadBooks();
+      render();
     } catch (e) {
       alert('保存に失敗しました: ' + e.message);
       saveBtn.disabled = false;
@@ -675,36 +693,48 @@
   }
 
   async function deleteBook(id) {
-    await apiPost('delete', { id });
-    await loadBooks();
+    const res = await apiPost('delete', { id });
+    if (res.ok) removeLocalBook(id);
+    applyMutationResult(res);
+    render();
   }
 
   async function lendBookAction(id, borrower) {
-    await apiPost('lend', { id, borrower });
+    const res = await apiPost('lend', { id, borrower });
+    if (res.ok) upsertLocalBook(res.book);
+    applyMutationResult(res);
     lendingId = null;
-    await loadBooks();
+    render();
   }
 
   async function returnBook(id) {
-    await apiPost('return', { id });
-    await loadBooks();
+    const res = await apiPost('return', { id });
+    if (res.ok) upsertLocalBook(res.book);
+    applyMutationResult(res);
+    render();
   }
 
   async function toggleLocationAction(id) {
     const book = books.find(b => b.id === id);
     if (!book) return;
     const newLocation = book.location === 'lab' ? 'home' : 'lab';
-    await apiPost('update', { id, location: newLocation });
-    await loadBooks();
+    const res = await apiPost('update', { id, location: newLocation });
+    if (res.ok) upsertLocalBook(res.book);
+    applyMutationResult(res);
+    render();
   }
 
   async function bulkMoveLocation(newLocation) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await Promise.all(ids.map(id => apiPost('update', { id, location: newLocation })));
+    const results = await Promise.all(ids.map(id => apiPost('update', { id, location: newLocation })));
+    results.forEach(res => {
+      if (res.ok) upsertLocalBook(res.book);
+      applyMutationResult(res);
+    });
     selectedIds.clear();
     selectionMode = false;
-    await loadBooks();
+    render();
   }
 
   // ---------- バーコードスキャン (iPhoneカメラ) ----------
