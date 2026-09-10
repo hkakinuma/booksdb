@@ -196,7 +196,10 @@
     root.innerHTML = `
       <div class="bt-header">
         <div class="bt-title">蔵書管理</div>
-        <div class="bt-count">全 ${books.length} 冊 / 貸出中 ${countLent} 冊${lastUpdated ? ` ・ 最終更新: ${formatLastUpdated(lastUpdated)}` : ''} ・ <span class="bt-logout-link" id="bt-logout">ログアウト</span></div>
+        <div class="bt-header-right">
+          <div class="bt-count">全 ${books.length} 冊 / 貸出中 ${countLent} 冊 ・ <span class="bt-logout-link" id="bt-logout">ログアウト</span></div>
+          ${lastUpdated ? `<div class="bt-last-updated">最終更新: ${formatLastUpdated(lastUpdated)}</div>` : ''}
+        </div>
       </div>
       <div class="bt-sticky-header">
         <div class="bt-toolbar">
