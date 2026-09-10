@@ -7,6 +7,7 @@
   const ACQUISITION_LABEL = { lab_budget: '個人研究費', kaken: '科研費', gift: '献本', self: '私費', unknown: 'その他' };
 
   let books = [];
+  let lastUpdated = '';
   let filter = 'all'; // all | lab | home | lent
   let sortBy = 'registered_desc'; // registered_desc | registered_asc | year_desc | year_asc
   let query = '';
@@ -58,6 +59,7 @@
         throw new Error(res.error || '読み込みに失敗しました');
       }
       books = res.books;
+      lastUpdated = res.lastUpdated || '';
       render();
     } catch (e) {
       root.innerHTML = `<div class="bt-loading">読み込みエラー: ${escapeHtml(String(e.message || e))}<br>しばらくしてから再読み込みしてください。</div>`;
@@ -88,6 +90,7 @@
         if (res.ok) {
           localStorage.setItem('bt_auth_token', pw);
           books = res.books;
+          lastUpdated = res.lastUpdated || '';
           render();
         } else {
           showLogin('パスワードが違います');
@@ -111,6 +114,14 @@
   function normalize(s) {
     if (s === null || s === undefined) return '';
     return String(s).toLowerCase().replace(/\s+/g, '');
+  }
+
+  function formatLastUpdated(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   function groupKey(b) {
@@ -185,7 +196,7 @@
     root.innerHTML = `
       <div class="bt-header">
         <div class="bt-title">蔵書管理</div>
-        <div class="bt-count">全 ${books.length} 冊 / 貸出中 ${countLent} 冊 ・ <span class="bt-logout-link" id="bt-logout">ログアウト</span></div>
+        <div class="bt-count">全 ${books.length} 冊 / 貸出中 ${countLent} 冊${lastUpdated ? ` ・ 最終更新: ${formatLastUpdated(lastUpdated)}` : ''} ・ <span class="bt-logout-link" id="bt-logout">ログアウト</span></div>
       </div>
       <div class="bt-sticky-header">
         <div class="bt-toolbar">
