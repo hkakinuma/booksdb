@@ -198,6 +198,7 @@
             <button class="bt-filter-btn ${filter === 'lab' ? 'active' : ''}" data-filter="lab">研究室</button>
             <button class="bt-filter-btn ${filter === 'home' ? 'active' : ''}" data-filter="home">自宅</button>
             <button class="bt-filter-btn ${filter === 'lent' ? 'active' : ''}" data-filter="lent">貸出中</button>
+            <button class="bt-filter-btn" id="bt-refresh-btn" title="最新の状態に更新">⟳ 更新</button>
           </div>
           <select class="bt-sort-select" id="bt-sort">
             <option value="registered_desc" ${sortBy === 'registered_desc' ? 'selected' : ''}>登録が新しい順</option>
@@ -440,9 +441,17 @@
       });
     }
 
-    document.querySelectorAll('.bt-filter-btn').forEach(btn => {
+    document.querySelectorAll('.bt-filter-btn[data-filter]').forEach(btn => {
       btn.addEventListener('click', () => { filter = btn.getAttribute('data-filter'); resetRenderLimit(); render(); });
     });
+
+    const refreshBtn = document.getElementById('bt-refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        resetRenderLimit();
+        loadBooks();
+      });
+    }
 
     const sortEl = document.getElementById('bt-sort');
     if (sortEl) {
