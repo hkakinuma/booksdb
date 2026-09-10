@@ -29,17 +29,32 @@
 
   // ---------- API ----------
 
+  const FETCH_TIMEOUT_MS = 25000; // これを超えて応答が無ければ諦めてエラーにする
+
+  async function fetchWithTimeout(url, options) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      return await fetch(url, Object.assign({}, options, { signal: controller.signal }));
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error('通信がタイムアウトしました。もう一度お試しください');
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function apiGet(action, params) {
     const url = new URL(API_URL);
     url.searchParams.set('action', action);
     url.searchParams.set('token', authToken);
     Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
-    const res = await fetch(url.toString());
+    const res = await fetchWithTimeout(url.toString());
     return res.json();
   }
 
   async function apiPost(action, book) {
-    const res = await fetch(API_URL, {
+    const res = await fetchWithTimeout(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // プリフライトを避けるため text/plain で送る
       body: JSON.stringify({ action, token: authToken, book: book || {} })
@@ -693,24 +708,39 @@
   }
 
   async function deleteBook(id) {
-    const res = await apiPost('delete', { id });
-    if (res.ok) removeLocalBook(id);
-    applyMutationResult(res);
+    try {
+      const res = await apiPost('delete', { id });
+      if (!res.ok) throw new Error(res.error || '削除に失敗しました');
+      removeLocalBook(id);
+      applyMutationResult(res);
+    } catch (e) {
+      alert('削除に失敗しました: ' + e.message);
+    }
     render();
   }
 
   async function lendBookAction(id, borrower) {
-    const res = await apiPost('lend', { id, borrower });
-    if (res.ok) upsertLocalBook(res.book);
-    applyMutationResult(res);
+    try {
+      const res = await apiPost('lend', { id, borrower });
+      if (!res.ok) throw new Error(res.error || '貸出の記録に失敗しました');
+      upsertLocalBook(res.book);
+      applyMutationResult(res);
+    } catch (e) {
+      alert('貸出の記録に失敗しました: ' + e.message);
+    }
     lendingId = null;
     render();
   }
 
   async function returnBook(id) {
-    const res = await apiPost('return', { id });
-    if (res.ok) upsertLocalBook(res.book);
-    applyMutationResult(res);
+    try {
+      const res = await apiPost('return', { id });
+      if (!res.ok) throw new Error(res.error || '返却の記録に失敗しました');
+      upsertLocalBook(res.book);
+      applyMutationResult(res);
+    } catch (e) {
+      alert('返却の記録に失敗しました: ' + e.message);
+    }
     render();
   }
 
@@ -718,20 +748,29 @@
     const book = books.find(b => b.id === id);
     if (!book) return;
     const newLocation = book.location === 'lab' ? 'home' : 'lab';
-    const res = await apiPost('update', { id, location: newLocation });
-    if (res.ok) upsertLocalBook(res.book);
-    applyMutationResult(res);
+    try {
+      const res = await apiPost('update', { id, location: newLocation });
+      if (!res.ok) throw new Error(res.error || '場所の変更に失敗しました');
+      upsertLocalBook(res.book);
+      applyMutationResult(res);
+    } catch (e) {
+      alert('場所の変更に失敗しました: ' + e.message);
+    }
     render();
   }
 
   async function bulkMoveLocation(newLocation) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    const results = await Promise.all(ids.map(id => apiPost('update', { id, location: newLocation })));
-    results.forEach(res => {
-      if (res.ok) upsertLocalBook(res.book);
-      applyMutationResult(res);
-    });
+    try {
+      const results = await Promise.all(ids.map(id => apiPost('update', { id, location: newLocation })));
+      results.forEach(res => {
+        if (res.ok) upsertLocalBook(res.book);
+        applyMutationResult(res);
+      });
+    } catch (e) {
+      alert('一括移動に失敗しました: ' + e.message);
+    }
     selectedIds.clear();
     selectionMode = false;
     render();
