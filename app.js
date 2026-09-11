@@ -14,7 +14,6 @@
   let showForm = false;
   let editingId = null;
   let lendingId = null;
-  let scannerInstance = null;
   let lookupTimer = null;
   let isComposingSearch = false;
   let selectionMode = false;
@@ -777,8 +776,27 @@
   }
 
   // ---------- バーコードスキャン (iPhoneカメラ) ----------
+  // ZXing-C++をWebAssemblyにコンパイルしたbarcode-detectorライブラリを使用(html5-qrcodeより高速)
 
-  function openScanner() {
+  let barcodeDetectorScriptPromise = null;
+  function loadBarcodeDetectorScript() {
+    if (window.BarcodeDetector) return Promise.resolve();
+    if (barcodeDetectorScriptPromise) return barcodeDetectorScriptPromise;
+    barcodeDetectorScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://fastly.jsdelivr.net/npm/barcode-detector@3/dist/iife/polyfill.min.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('スキャナーの読み込みに失敗しました'));
+      document.head.appendChild(script);
+    });
+    return barcodeDetectorScriptPromise;
+  }
+
+  let scannerStream = null;
+  let scannerIntervalId = null;
+  let scannerBusy = false;
+
+  async function openScanner() {
     const modal = document.getElementById('bt-scanner-modal');
     modal.innerHTML = `
       <div class="bt-modal-overlay" id="bt-modal-overlay">
@@ -787,47 +805,57 @@
             <span>バーコードをスキャン</span>
             <button class="bt-icon-btn" id="bt-close-scanner">閉じる</button>
           </div>
-          <div id="bt-reader"></div>
+          <div id="bt-reader"><video id="bt-scanner-video" playsinline muted autoplay></video></div>
           <div class="bt-modal-hint">本の裏表紙のバーコード(ISBN)にカメラを向けてください</div>
         </div>
       </div>
     `;
     document.getElementById('bt-close-scanner').addEventListener('click', closeScanner);
 
-    if (typeof Html5Qrcode === 'undefined') {
-      document.getElementById('bt-reader').innerHTML = '<div class="bt-status-warn">スキャナーの読み込みに失敗しました。手入力してください。</div>';
-      return;
+    const readerDiv = document.getElementById('bt-reader');
+    const videoEl = document.getElementById('bt-scanner-video');
+
+    try {
+      await loadBarcodeDetectorScript();
+      if (!window.BarcodeDetector) throw new Error('このブラウザはバーコード読み取りに対応していません');
+
+      scannerStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { min: 640, ideal: 1920, max: 2560 },
+          height: { min: 480, ideal: 1080, max: 1440 }
+        }
+      });
+      videoEl.srcObject = scannerStream;
+      await videoEl.play();
+
+      const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'code_128'] });
+      scannerBusy = false;
+
+      scannerIntervalId = setInterval(async () => {
+        if (!scannerStream || scannerBusy) return;
+        scannerBusy = true;
+        try {
+          const barcodes = await detector.detect(videoEl);
+          if (barcodes && barcodes.length > 0) {
+            const isbnInput = document.getElementById('bt-input-isbn');
+            if (isbnInput) isbnInput.value = barcodes[0].rawValue.replace(/[^0-9Xx]/g, '');
+            closeScanner();
+            if (isbnInput) doLookup(isbnInput.value);
+            return;
+          }
+        } catch (e) { /* 読み取れないフレームは無視 */ }
+        scannerBusy = false;
+      }, 66); // 約15fps
+    } catch (e) {
+      readerDiv.innerHTML = '<div class="bt-status-warn">カメラを起動できませんでした。ブラウザのカメラ権限を確認してください。</div>';
     }
-
-    scannerInstance = new Html5Qrcode('bt-reader', {
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.CODE_128
-      ]
-    });
-
-    scannerInstance.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 150 } },
-      (decodedText) => {
-        const isbnInput = document.getElementById('bt-input-isbn');
-        if (isbnInput) isbnInput.value = decodedText.replace(/[^0-9Xx]/g, '');
-        closeScanner();
-        if (isbnInput) doLookup(isbnInput.value);
-      },
-      () => { /* 読み取り失敗は毎フレーム起きうるので無視 */ }
-    ).catch(() => {
-      document.getElementById('bt-reader').innerHTML = '<div class="bt-status-warn">カメラを起動できませんでした。ブラウザのカメラ権限を確認してください。</div>';
-    });
   }
 
   function closeScanner() {
     const modal = document.getElementById('bt-scanner-modal');
-    if (scannerInstance) {
-      scannerInstance.stop().catch(() => {}).finally(() => { scannerInstance = null; });
-    }
+    if (scannerIntervalId) { clearInterval(scannerIntervalId); scannerIntervalId = null; }
+    if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
     if (modal) modal.innerHTML = '';
   }
 
