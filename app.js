@@ -76,7 +76,14 @@
       lastUpdated = res.lastUpdated || '';
       render();
     } catch (e) {
-      root.innerHTML = `<div class="bt-loading">読み込みエラー: ${escapeHtml(String(e.message || e))}<br>しばらくしてから再読み込みしてください。</div>`;
+      root.innerHTML = `
+        <div class="bt-loading">
+          読み込みエラー: ${escapeHtml(String(e.message || e))}<br>
+          <button class="bt-btn-primary bt-retry-btn" id="bt-retry-load">再読み込み</button>
+        </div>
+      `;
+      const retryBtn = document.getElementById('bt-retry-load');
+      if (retryBtn) retryBtn.addEventListener('click', () => loadBooks());
     }
   }
 
