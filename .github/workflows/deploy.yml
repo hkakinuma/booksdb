@@ -27,6 +27,7 @@ jobs:
         run: |
           mkdir -p dist
           cp index.html app.js robots.txt dist/
+          if [ -d assets ]; then cp -r assets dist/; fi
           cat > dist/config.js << EOF
           window.CONFIG = {
             API_URL: '${APP_API_URL}'
