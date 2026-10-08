@@ -791,7 +791,7 @@
     if (barcodeDetectorScriptPromise) return barcodeDetectorScriptPromise;
     barcodeDetectorScriptPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://fastly.jsdelivr.net/npm/barcode-detector@3/dist/iife/polyfill.min.js';
+      script.src = './assets/vendor/barcode-detector-polyfill.js'; // 自己ホスト(外部CDNに依存しない)
       script.onload = () => resolve();
       script.onerror = () => reject(new Error('スキャナーの読み込みに失敗しました'));
       document.head.appendChild(script);
