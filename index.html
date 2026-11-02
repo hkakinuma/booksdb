@@ -23,6 +23,8 @@
     --lent: #ad841f;
     --lent-soft: #f2e6c6;
     --danger: #a33b2e;
+    --ordered: #6b5a9c;
+    --ordered-soft: #e8e3f1;
   }
   * { box-sizing: border-box; }
   body {
@@ -108,6 +110,15 @@
   .bt-tag-lab { background: var(--lab-soft); color: var(--lab); }
   .bt-tag-home { background: var(--home-soft); color: var(--home); }
   .bt-tag-lent { background: var(--lent-soft); color: var(--lent); }
+  .bt-tag-ordered { background: var(--ordered-soft); color: var(--ordered); }
+
+  /* 発注済(まだ届いていない本)は一覧の最上部にまとめ、色で区別する */
+  .bt-ordered-header { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 13px; font-weight: 600; color: var(--ordered); margin: 4px 0 6px; }
+  .bt-ordered-section { margin-bottom: 18px; }
+  .bt-group-ordered { background: var(--ordered-soft); border-left: 4px solid var(--ordered); border-radius: 3px; padding-right: 6px; }
+  .bt-icon-btn-arrive { background: var(--ordered); border-color: var(--ordered); color: #fff; }
+  .bt-arrive-prompt { font-family: -apple-system, "Segoe UI", sans-serif; background: var(--ordered-soft); border: 1px solid var(--ordered); color: var(--ordered); font-size: 13px; padding: 8px 12px; border-radius: 3px; margin-top: 6px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .bt-flash { font-family: -apple-system, "Segoe UI", sans-serif; background: var(--lab-soft); border: 1px solid var(--lab); color: var(--lab); font-size: 13px; padding: 8px 12px; border-radius: 3px; margin-bottom: 10px; }
   .bt-tag-swap { cursor: pointer; user-select: none; }
   .bt-tag-swap:active { opacity: 0.6; }
   .bt-swap-icon { font-size: 10px; opacity: 0.75; }

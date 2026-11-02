@@ -21,6 +21,9 @@
   let expandedMemoIds = new Set();
   let renderLimit = 60; // 一度に描画するグループ数(スクロールで増える)
   let loadMoreObserver = null;
+  let flashMsg = ''; // 到着処理などの完了メッセージ(数秒で消える)
+
+  function isOrdered(b) { return String(b.orderStatus || '') === 'ordered'; }
 
   function resetRenderLimit() { renderLimit = 60; }
 
@@ -191,7 +194,10 @@
   // ---------- レンダリング ----------
 
   function render() {
-    const visible = books.filter(b => matchesQuery(b) && matchesFilter(b));
+    const matched = books.filter(b => matchesQuery(b) && matchesFilter(b));
+    // 発注済(まだ届いていない本)は常に最上部。発注が古い順(届くのが遅れているものが先頭)
+    const orderedItems = matched.filter(isOrdered).sort((a, b) => String(a.registeredDate || '').localeCompare(String(b.registeredDate || '')));
+    const visible = matched.filter(b => !isOrdered(b));
     visible.sort(compareBooks);
     const groups = {};
     const order = [];
@@ -209,7 +215,9 @@
       });
     });
 
-    const countLent = books.filter(b => b.status === 'lent').length;
+    const ownedBooks = books.filter(b => !isOrdered(b));
+    const countOrdered = books.length - ownedBooks.length;
+    const countLent = ownedBooks.filter(b => b.status === 'lent').length;
 
     const visibleOrder = order.slice(0, renderLimit);
     const hasMore = order.length > renderLimit;
@@ -218,7 +226,7 @@
       <div class="bt-header">
         <div class="bt-title">蔵書管理</div>
         <div class="bt-header-right">
-          <div class="bt-count">全 ${books.length} 冊 / 貸出中 ${countLent} 冊 ・ <span class="bt-logout-link" id="bt-logout">ログアウト</span></div>
+          <div class="bt-count">全 ${ownedBooks.length} 冊 / 貸出中 ${countLent} 冊${countOrdered ? ` / 発注済 ${countOrdered} 冊` : ''} ・ <span class="bt-logout-link" id="bt-logout">ログアウト</span></div>
           ${lastUpdated ? `<div class="bt-last-updated">最終更新: ${formatLastUpdated(lastUpdated)}</div>` : ''}
         </div>
       </div>
@@ -246,9 +254,15 @@
         </div>
         ${selectionMode ? renderBulkBar() : ''}
       </div>
+      ${flashMsg ? `<div class="bt-flash" id="bt-flash">${escapeHtml(flashMsg)}</div>` : ''}
       ${showForm ? renderForm() : ''}
+      ${orderedItems.length ? `
+        <div class="bt-ordered-section">
+          <div class="bt-ordered-header">📦 発注済(まだ届いていません) ${orderedItems.length}冊</div>
+          <div class="bt-list">${orderedItems.map(b => renderGroup([b])).join('')}</div>
+        </div>` : ''}
       ${order.length === 0
-        ? `<div class="bt-empty">${books.length === 0 ? 'まだ本が登録されていません。「+ 本を追加」から登録してください。' : '該当する本がありません。'}</div>`
+        ? (orderedItems.length ? '' : `<div class="bt-empty">${books.length === 0 ? 'まだ本が登録されていません。「+ 本を追加」から登録してください。' : '該当する本がありません。'}</div>`)
         : `<div class="bt-list">${visibleOrder.map(k => renderGroup(groups[k])).join('')}</div>`
       }
       ${hasMore ? '<div id="bt-load-more-sentinel" class="bt-load-more">読み込み中…</div>' : ''}
@@ -302,7 +316,7 @@
     if (pubBit) infoBits.push(escapeHtml(pubBit));
 
     return `
-      <div class="bt-group">
+      <div class="bt-group${isOrdered(first) ? ' bt-group-ordered' : ''}">
         <div class="bt-group-content">
           ${thumb}
           <div class="bt-group-body">
@@ -323,6 +337,7 @@
       ? `<span class="bt-tag bt-tag-lab bt-tag-swap" data-action="toggle-location" data-id="${b.id}" title="タップで自宅へ移動">研究室 <span class="bt-swap-icon">⇄</span></span>`
       : `<span class="bt-tag bt-tag-home bt-tag-swap" data-action="toggle-location" data-id="${b.id}" title="タップで研究室へ移動">自宅 <span class="bt-swap-icon">⇄</span></span>`;
     const lentTag = b.status === 'lent' ? '<span class="bt-tag bt-tag-lent">貸出中</span>' : '';
+    const orderedTag = isOrdered(b) ? '<span class="bt-tag bt-tag-ordered">発注済</span>' : '';
 
     const acquisitionText = ACQUISITION_LABEL[b.acquisition]
       ? `<span class="bt-acquisition-inline">${escapeHtml(ACQUISITION_LABEL[b.acquisition])}</span>`
@@ -347,15 +362,18 @@
         <button class="bt-icon-btn" id="bt-cancel-lend">キャンセル</button>
       </div>` : '';
 
-    const checkboxHtml = selectionMode
+    // 発注済の本は、まだ手元に無いので一括移動の対象にしない
+    const checkboxHtml = selectionMode && !isOrdered(b)
       ? `<input type="checkbox" class="bt-row-checkbox" data-id="${b.id}" ${selectedIds.has(b.id) ? 'checked' : ''} />`
       : '';
 
     const rowActionsHtml = selectionMode ? '' : `
         <div class="bt-row-actions">
-          ${b.status === 'lent'
-            ? `<button class="bt-icon-btn" data-action="return" data-id="${b.id}">返却済み</button>`
-            : `<button class="bt-icon-btn" data-action="lend" data-id="${b.id}">貸出</button>`}
+          ${isOrdered(b)
+            ? `<button class="bt-icon-btn bt-icon-btn-arrive" data-action="arrive" data-id="${escapeHtml(b.id)}">到着</button>`
+            : (b.status === 'lent'
+              ? `<button class="bt-icon-btn" data-action="return" data-id="${escapeHtml(b.id)}">返却済み</button>`
+              : `<button class="bt-icon-btn" data-action="lend" data-id="${escapeHtml(b.id)}">貸出</button>`)}
           <button class="bt-icon-btn" data-action="edit" data-id="${b.id}">編集</button>
           <button class="bt-icon-btn danger" data-action="delete" data-id="${b.id}">削除</button>
         </div>`;
@@ -364,7 +382,7 @@
       <div class="bt-row">
         ${checkboxHtml}
         <div class="bt-row-main">
-          <div class="bt-row-tags">${locTag}${lentTag}${acquisitionText}</div>
+          <div class="bt-row-tags">${locTag}${orderedTag}${lentTag}${acquisitionText}</div>
           ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ／ ')}</div>` : ''}
           ${memoHtml}
           ${lendFormHtml}
@@ -382,7 +400,20 @@
   function renderDupWarningHtml(title, isbn, excludeId) {
     const dupes = findSameBooks(title, isbn, excludeId);
     if (dupes.length === 0) return '';
-    return `<div class="bt-dup-warning">📚 この本はすでに${dupes.length}冊あります: ${dupes.map(d => `${LOCATION_LABEL[d.location]}(${ACQUISITION_LABEL[d.acquisition] || '不明'})`).join('、')} ー そのまま追加できます</div>`;
+    const label = d => `${isOrdered(d) ? '発注済・' : ''}${LOCATION_LABEL[d.location] || ''}(${ACQUISITION_LABEL[d.acquisition] || '不明'})`;
+    let html = `<div class="bt-dup-warning">📚 この本はすでに${dupes.length}冊あります: ${dupes.map(label).join('、')} ー そのまま追加できます</div>`;
+
+    // 新規登録中に、発注済の本と一致したら「到着」として処理できるようにする(発注が古い1冊が対象)
+    if (!excludeId) {
+      const orderedDupes = dupes.filter(isOrdered)
+        .sort((a, b) => String(a.registeredDate || '').localeCompare(String(b.registeredDate || '')));
+      if (orderedDupes.length > 0) {
+        const target = orderedDupes[0];
+        html += `<div class="bt-arrive-prompt">📦 発注済の本です。届いた本なら、新しく登録せずに所蔵にできます${orderedDupes.length > 1 ? `(${orderedDupes.length}冊発注中・古い発注から処理)` : ''}
+          <button type="button" class="bt-icon-btn bt-icon-btn-arrive" data-action="arrive" data-id="${escapeHtml(target.id)}">到着として登録</button></div>`;
+      }
+    }
+    return html;
   }
 
   function updateDupWarningLive() {
@@ -391,6 +422,15 @@
     const container = document.getElementById('bt-dup-container');
     if (!titleEl || !container) return;
     container.innerHTML = renderDupWarningHtml(titleEl.value, isbnEl ? isbnEl.value : '', editingId);
+    // 後から差し込んだボタンには、イベントを個別に付け直す
+    container.querySelectorAll('[data-action="arrive"]').forEach(btn => {
+      btn.addEventListener('click', () => handleArriveClick(btn));
+    });
+  }
+
+  function handleArriveClick(btn) {
+    btn.disabled = true; btn.textContent = '処理中…';
+    arriveBookAction(btn.getAttribute('data-id'));
   }
 
   function updateCoverPreview(url) {
@@ -427,6 +467,10 @@
           <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
           <option value="self" ${v('acquisition') === 'self' ? 'selected' : ''}>私費</option>
           <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>その他</option>
+        </select>
+        <select class="bt-full" id="bt-input-orderStatus">
+          <option value="" ${!isOrdered(editing || {}) ? 'selected' : ''}>入手状況: 所蔵(手元にある)</option>
+          <option value="ordered" ${isOrdered(editing || {}) ? 'selected' : ''}>入手状況: 発注済(まだ届いていない)</option>
         </select>
         <div class="bt-full bt-cover-row">
           <input id="bt-input-coverUrl" type="text" placeholder="書影URL(自動取得できなかった場合は画像URLを直接入力)" value="${escapeHtml(v('coverUrl'))}" />
@@ -594,6 +638,7 @@
           btn.disabled = true; btn.textContent = '処理中…';
           returnBook(id);
         }
+        else if (action === 'arrive') { handleArriveClick(btn); }
         else if (action === 'toggle-location') {
           btn.style.pointerEvents = 'none';
           btn.style.opacity = '0.5';
@@ -687,6 +732,7 @@
       coverUrl: document.getElementById('bt-input-coverUrl').value.trim(),
       location: document.getElementById('bt-input-location').value,
       acquisition: document.getElementById('bt-input-acquisition').value,
+      orderStatus: document.getElementById('bt-input-orderStatus').value,
       memo: document.getElementById('bt-input-memo').value.trim()
     };
 
@@ -746,6 +792,31 @@
       applyMutationResult(res);
     } catch (e) {
       alert('返却の記録に失敗しました: ' + e.message);
+    }
+    render();
+  }
+
+  function showFlash(msg) {
+    flashMsg = msg;
+    setTimeout(() => {
+      flashMsg = '';
+      const el = document.getElementById('bt-flash');
+      if (el) el.remove();
+    }, 4000);
+  }
+
+  // 発注済の本が届いたとき。新しい行は作らず、入手状況を所蔵に戻す(登録日は届いた日時になる)
+  async function arriveBookAction(id) {
+    try {
+      const res = await apiPost('arrive', { id });
+      if (!res.ok) throw new Error(res.error || '到着の記録に失敗しました');
+      upsertLocalBook(res.book);
+      applyMutationResult(res);
+      showFlash(`「${res.book.title}」を所蔵にしました(${LOCATION_LABEL[res.book.location] || ''})`);
+      if (showForm && !editingId) showForm = false; // 新規登録フォームから到着にした場合は、フォームを閉じる
+      window.scrollTo({ top: 0 });
+    } catch (e) {
+      alert('到着の記録に失敗しました: ' + e.message);
     }
     render();
   }
