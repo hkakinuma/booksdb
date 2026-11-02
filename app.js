@@ -258,7 +258,7 @@
       ${showForm ? renderForm() : ''}
       ${orderedItems.length ? `
         <div class="bt-ordered-section">
-          <div class="bt-ordered-header">📦 発注済(まだ届いていません) ${orderedItems.length}冊</div>
+          <div class="bt-ordered-header">発注済 ${orderedItems.length}冊</div>
           <div class="bt-list">${orderedItems.map(b => renderGroup([b])).join('')}</div>
         </div>` : ''}
       ${order.length === 0
