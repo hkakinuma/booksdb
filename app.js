@@ -468,9 +468,9 @@
           <option value="self" ${v('acquisition') === 'self' ? 'selected' : ''}>私費</option>
           <option value="unknown" ${v('acquisition') === 'unknown' ? 'selected' : ''}>その他</option>
         </select>
-        <select class="bt-full" id="bt-input-orderStatus">
-          <option value="" ${!isOrdered(editing || {}) ? 'selected' : ''}>入手状況: 所蔵(手元にある)</option>
-          <option value="ordered" ${isOrdered(editing || {}) ? 'selected' : ''}>入手状況: 発注済(まだ届いていない)</option>
+        <select id="bt-input-orderStatus">
+          <option value="" ${!isOrdered(editing || {}) ? 'selected' : ''}>所蔵</option>
+          <option value="ordered" ${isOrdered(editing || {}) ? 'selected' : ''}>発注済</option>
         </select>
         <div class="bt-full bt-cover-row">
           <input id="bt-input-coverUrl" type="text" placeholder="書影URL(自動取得できなかった場合は画像URLを直接入力)" value="${escapeHtml(v('coverUrl'))}" />
