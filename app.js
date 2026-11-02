@@ -291,11 +291,14 @@
 
   function renderBulkBar() {
     const count = selectedIds.size;
+    const hasOrdered = books.some(isOrdered);
+    const selectedOrderedCount = books.filter(b => selectedIds.has(b.id) && isOrdered(b)).length;
     return `
       <div class="bt-bulk-bar">
         <span class="bt-bulk-count">${count}冊選択中</span>
         <button class="bt-btn-ghost" id="bt-bulk-lab" ${count === 0 ? 'disabled' : ''}>研究室へ移動</button>
         <button class="bt-btn-ghost" id="bt-bulk-home" ${count === 0 ? 'disabled' : ''}>自宅へ移動</button>
+        ${hasOrdered ? `<button class="bt-btn-ghost" id="bt-bulk-arrive" ${selectedOrderedCount === 0 ? 'disabled' : ''}>到着にする${selectedOrderedCount ? `(${selectedOrderedCount}冊)` : ''}</button>` : ''}
       </div>
     `;
   }
@@ -362,8 +365,7 @@
         <button class="bt-icon-btn" id="bt-cancel-lend">キャンセル</button>
       </div>` : '';
 
-    // 発注済の本は、まだ手元に無いので一括移動の対象にしない
-    const checkboxHtml = selectionMode && !isOrdered(b)
+    const checkboxHtml = selectionMode
       ? `<input type="checkbox" class="bt-row-checkbox" data-id="${b.id}" ${selectedIds.has(b.id) ? 'checked' : ''} />`
       : '';
 
@@ -575,6 +577,13 @@
       bulkHomeBtn.addEventListener('click', () => {
         bulkHomeBtn.disabled = true; bulkHomeBtn.textContent = '移動中…';
         bulkMoveLocation('home');
+      });
+    }
+    const bulkArriveBtn = document.getElementById('bt-bulk-arrive');
+    if (bulkArriveBtn) {
+      bulkArriveBtn.addEventListener('click', () => {
+        bulkArriveBtn.disabled = true; bulkArriveBtn.textContent = '処理中…';
+        bulkArrive();
       });
     }
 
@@ -833,6 +842,27 @@
     } catch (e) {
       alert('場所の変更に失敗しました: ' + e.message);
     }
+    render();
+  }
+
+  // 選択した本のうち、発注済のものをまとめて到着(所蔵)にする。所蔵の本が混ざっていても無視する
+  async function bulkArrive() {
+    const ids = books.filter(b => selectedIds.has(b.id) && isOrdered(b)).map(b => b.id);
+    if (ids.length === 0) return;
+    let okCount = 0;
+    try {
+      const results = await Promise.all(ids.map(id => apiPost('arrive', { id })));
+      results.forEach(res => {
+        if (res.ok) { upsertLocalBook(res.book); okCount++; }
+        applyMutationResult(res);
+      });
+      if (okCount < ids.length) alert(`${ids.length - okCount}冊は到着の記録に失敗しました。更新してご確認ください`);
+    } catch (e) {
+      alert('一括の到着処理に失敗しました: ' + e.message);
+    }
+    if (okCount > 0) showFlash(`${okCount}冊を所蔵にしました`);
+    selectedIds.clear();
+    selectionMode = false;
     render();
   }
 
