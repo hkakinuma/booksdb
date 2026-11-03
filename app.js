@@ -4,7 +4,7 @@
 
   const LOCATION_LABEL = { lab: '研究室', home: '自宅' };
   const STATUS_LABEL = { available: '保管中', lent: '貸出中' };
-  const ACQUISITION_LABEL = { lab_budget: '個人研究費', kaken: '科研費', gift: '献本', self: '私費', unknown: 'その他' };
+  const ACQUISITION_LABEL = { lab_budget: '個研', kaken: '科研費', gift: '献本', self: '私費', unknown: 'その他' };
 
   let books = [];
   let lastUpdated = '';
@@ -341,7 +341,10 @@
     const lentTag = b.status === 'lent' ? '<span class="bt-tag bt-tag-lent">貸出中</span>' : '';
     const orderedTag = isOrdered(b) ? '<span class="bt-tag bt-tag-ordered">発注済</span>' : '';
 
-    // 費用(ACQUISITION)は一覧には表示しない。フォームの入力欄とスプレッドシートには残してある
+    const acquisitionText = ACQUISITION_LABEL[b.acquisition]
+      ? `<span class="bt-acquisition-inline">${escapeHtml(ACQUISITION_LABEL[b.acquisition])}</span>`
+      : '';
+
     const metaBits = [];
     if (b.status === 'lent' && b.borrower) metaBits.push(`→ ${escapeHtml(b.borrower)}${b.lentDate ? ' (' + escapeHtml(b.lentDate) + '〜)' : ''}`);
 
@@ -380,7 +383,7 @@
       <div class="bt-row${isOrdered(b) ? ' bt-row-ordered' : ''}">
         ${checkboxHtml}
         <div class="bt-row-main">
-          <div class="bt-row-tags">${isOrdered(b) ? orderedTag : locTag}${lentTag}</div>
+          <div class="bt-row-tags">${isOrdered(b) ? orderedTag : locTag}${lentTag}${acquisitionText}</div>
           ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ／ ')}</div>` : ''}
           ${memoHtml}
           ${lendFormHtml}
@@ -460,7 +463,7 @@
           <option value="home" ${v('location') === 'home' ? 'selected' : ''}>自宅</option>
         </select>
         <select id="bt-input-acquisition">
-          <option value="lab_budget" ${v('acquisition', 'lab_budget') === 'lab_budget' ? 'selected' : ''}>個人研究費</option>
+          <option value="lab_budget" ${v('acquisition', 'lab_budget') === 'lab_budget' ? 'selected' : ''}>個研</option>
           <option value="kaken" ${v('acquisition') === 'kaken' ? 'selected' : ''}>科研費</option>
           <option value="gift" ${v('acquisition') === 'gift' ? 'selected' : ''}>献本</option>
           <option value="self" ${v('acquisition') === 'self' ? 'selected' : ''}>私費</option>
