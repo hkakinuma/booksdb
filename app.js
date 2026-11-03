@@ -341,10 +341,7 @@
     const lentTag = b.status === 'lent' ? '<span class="bt-tag bt-tag-lent">貸出中</span>' : '';
     const orderedTag = isOrdered(b) ? '<span class="bt-tag bt-tag-ordered">発注済</span>' : '';
 
-    const acquisitionText = ACQUISITION_LABEL[b.acquisition]
-      ? `<span class="bt-acquisition-inline">${escapeHtml(ACQUISITION_LABEL[b.acquisition])}</span>`
-      : '';
-
+    // 費用(ACQUISITION)は一覧には表示しない。フォームの入力欄とスプレッドシートには残してある
     const metaBits = [];
     if (b.status === 'lent' && b.borrower) metaBits.push(`→ ${escapeHtml(b.borrower)}${b.lentDate ? ' (' + escapeHtml(b.lentDate) + '〜)' : ''}`);
 
@@ -383,7 +380,7 @@
       <div class="bt-row${isOrdered(b) ? ' bt-row-ordered' : ''}">
         ${checkboxHtml}
         <div class="bt-row-main">
-          <div class="bt-row-tags">${isOrdered(b) ? orderedTag : locTag}${lentTag}${acquisitionText}</div>
+          <div class="bt-row-tags">${isOrdered(b) ? orderedTag : locTag}${lentTag}</div>
           ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ／ ')}</div>` : ''}
           ${memoHtml}
           ${lendFormHtml}
