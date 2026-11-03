@@ -23,6 +23,15 @@
   let loadMoreObserver = null;
   let flashMsg = ''; // 到着処理などの完了メッセージ(数秒で消える)
 
+  // 発注済の区画を畳んでいるか(この端末のブラウザに記憶する。保存できない環境でも動作には影響しない)
+  const ORDERED_COLLAPSED_KEY = 'bt_ordered_collapsed';
+  let orderedCollapsed = false;
+  try { orderedCollapsed = localStorage.getItem(ORDERED_COLLAPSED_KEY) === '1'; } catch (e) { /* 無視 */ }
+  function setOrderedCollapsed(v) {
+    orderedCollapsed = v;
+    try { localStorage.setItem(ORDERED_COLLAPSED_KEY, v ? '1' : '0'); } catch (e) { /* 無視 */ }
+  }
+
   function isOrdered(b) { return String(b.orderStatus || '') === 'ordered'; }
 
   function resetRenderLimit() { renderLimit = 60; }
@@ -257,8 +266,8 @@
       ${showForm ? renderForm() : ''}
       ${orderedItems.length ? `
         <div class="bt-ordered-section">
-          <div class="bt-ordered-header">発注済 ${orderedItems.length}冊</div>
-          <div class="bt-list">${orderedItems.map(b => renderGroup([b])).join('')}</div>
+          <div class="bt-ordered-header" id="bt-ordered-toggle" role="button" aria-expanded="${orderedCollapsed ? 'false' : 'true'}">${orderedCollapsed ? '▸' : '▾'} 発注済 ${orderedItems.length}冊</div>
+          ${orderedCollapsed ? '' : `<div class="bt-list">${orderedItems.map(b => renderGroup([b])).join('')}</div>`}
         </div>` : ''}
       ${order.length === 0
         ? (orderedItems.length ? '' : `<div class="bt-empty">${books.length === 0 ? 'まだ本が登録されていません。「+ 本を追加」から登録してください。' : '該当する本がありません。'}</div>`)
@@ -536,6 +545,14 @@
     const sortEl = document.getElementById('bt-sort');
     if (sortEl) {
       sortEl.addEventListener('change', (e) => { sortBy = e.target.value; resetRenderLimit(); render(); });
+    }
+
+    const orderedToggle = document.getElementById('bt-ordered-toggle');
+    if (orderedToggle) {
+      orderedToggle.addEventListener('click', () => {
+        setOrderedCollapsed(!orderedCollapsed);
+        render();
+      });
     }
 
     const logoutLink = document.getElementById('bt-logout');
