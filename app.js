@@ -381,10 +381,10 @@
         </div>`;
 
     return `
-      <div class="bt-row">
+      <div class="bt-row${isOrdered(b) ? ' bt-row-ordered' : ''}">
         ${checkboxHtml}
         <div class="bt-row-main">
-          <div class="bt-row-tags">${locTag}${orderedTag}${lentTag}${acquisitionText}</div>
+          <div class="bt-row-tags">${isOrdered(b) ? orderedTag : locTag}${lentTag}${acquisitionText}</div>
           ${metaBits.length ? `<div class="bt-row-meta">${metaBits.join(' ／ ')}</div>` : ''}
           ${memoHtml}
           ${lendFormHtml}
