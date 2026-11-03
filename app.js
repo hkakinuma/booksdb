@@ -216,7 +216,6 @@
     });
 
     const ownedBooks = books.filter(b => !isOrdered(b));
-    const countOrdered = books.length - ownedBooks.length;
     const countLent = ownedBooks.filter(b => b.status === 'lent').length;
 
     const visibleOrder = order.slice(0, renderLimit);
@@ -226,7 +225,7 @@
       <div class="bt-header">
         <div class="bt-title">蔵書管理</div>
         <div class="bt-header-right">
-          <div class="bt-count">全 ${ownedBooks.length} 冊 / 貸出中 ${countLent} 冊${countOrdered ? ` / 発注済 ${countOrdered} 冊` : ''} ・ <span class="bt-logout-link" id="bt-logout">ログアウト</span></div>
+          <div class="bt-count">全 ${ownedBooks.length} 冊 / 貸出中 ${countLent} 冊 ・ <span class="bt-logout-link" id="bt-logout">ログアウト</span></div>
           ${lastUpdated ? `<div class="bt-last-updated">最終更新: ${formatLastUpdated(lastUpdated)}</div>` : ''}
         </div>
       </div>
